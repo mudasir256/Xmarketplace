@@ -13,7 +13,8 @@ export function getPublicSupabaseUrl() {
 }
 
 export function getPublicSupabaseAnonKey() {
-  return read("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  // Supabase dashboard may label this "anon" or "publishable"
+  return read("NEXT_PUBLIC_SUPABASE_ANON_KEY") || read("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 }
 
 export function isSupabaseConfigured() {
