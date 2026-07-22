@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie.name, cookie.value);
+  });
+  return to;
+}
+
 export async function proxy(request: NextRequest) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return NextResponse.next({ request });
@@ -22,7 +29,29 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isProtected =
+    path.startsWith("/account") || path === "/post-ad" || path === "/update-password";
+
+  if (!user && isProtected) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = path === "/update-password" ? "/forgot-password" : "/login";
+    if (path === "/update-password") {
+      loginUrl.searchParams.set("error", "session-missing");
+    } else {
+      loginUrl.searchParams.set("next", `${path}${request.nextUrl.search}`);
+    }
+    return copyCookies(response, NextResponse.redirect(loginUrl));
+  }
+
+  if (user && (path === "/login" || path === "/signup" || path === "/forgot-password")) {
+    return copyCookies(response, NextResponse.redirect(new URL("/account", request.url)));
+  }
+
   return response;
 }
 

@@ -5,7 +5,6 @@ import {
   Package, Plus, Search, Settings, ShoppingBag, ShoppingCart, UserRound, X,
 } from "lucide-react";
 import logo from "../../xmarketplacelogo.png";
-import profileAvatar from "@/images/profile-avatar.png";
 import bikeImage from "@/images/Bike.png";
 import propertySaleImage from "@/images/PropertyforSale.png";
 import propertyRentImage from "@/images/PropertyforRent.png";
@@ -16,6 +15,9 @@ import furnitureImage from "@/images/furniture.png";
 import animalsImage from "@/images/animals.png";
 import fashionImage from "@/images/Fashion.png";
 import servicesImage from "@/images/services.png";
+import { getAuthUser } from "@/lib/auth";
+import { LogoutButton } from "@/components/logout-button";
+import { UserAvatar } from "@/components/user-avatar";
 
 const mobileCategories = [
   { name: "Vehicles", slug: "vehicles", image: vehicleImage },
@@ -34,8 +36,12 @@ type SiteHeaderProps = {
   mode?: "marketplace" | "store";
 };
 
-export function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
+export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
   const store = mode === "store";
+  const user = await getAuthUser();
+  const displayName = user?.fullName ?? "Guest";
+  const displayEmail = user?.email ?? "Sign in to continue";
+  const avatarSrc = user?.avatarUrl;
 
   return (
     <>
@@ -82,37 +88,43 @@ export function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
             <Link className="whitespace-nowrap rounded-[9px] bg-brand-orange px-[17px] py-3 text-xs font-extrabold text-white shadow-[0_5px_14px_#ff4d1230] hover:-translate-y-px hover:bg-brand-orange-dark" href={store ? "/store" : "/post-ad"}>
               {store ? "Shop Now" : "+  Post Ad"}
             </Link>
-            <details className="group relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 whitespace-nowrap rounded-[10px] py-[3px] pl-0.5 pr-[5px] hover:bg-[#e7edf3] group-open:bg-[#e7edf3] [&::-webkit-details-marker]:hidden" aria-label="Open account menu">
-                <span className="size-[38px] overflow-hidden rounded-full bg-[linear-gradient(135deg,var(--color-brand-orange),#ff9f1c)]">
-                  <Image className="h-full w-full object-cover" src={profileAvatar} alt="" />
-                </span>
-                <span className="max-[1050px]:hidden">
-                  <strong className="block text-[10px] text-[#24344a]">My Account</strong>
-                  <small className="mt-0.5 block text-[8px] text-[#8a95a5]">{store ? "Customer" : "Seller"}</small>
-                </span>
-                <ChevronDown className="text-[#6e7b8d] transition-transform duration-200 group-open:rotate-180 max-[1050px]:hidden" size={15} />
-              </summary>
-              <nav className="absolute right-0 top-[calc(100%+17px)] w-[340px] overflow-hidden rounded-[20px] border border-[#dbe3e9] bg-white shadow-[0_20px_48px_#04182f38]" aria-label="Account menu">
-                <div className="flex min-h-[105px] items-center gap-[15px] bg-[linear-gradient(135deg,#006184,#004763)] px-[22px] py-5 text-white">
-                  <Image className="size-[62px] shrink-0 rounded-full object-cover" src={profileAvatar} alt="" />
-                  <span className="min-w-0">
-                    <strong className="block overflow-hidden text-ellipsis whitespace-nowrap text-base tracking-[.2px]">SYED MUDASIR BUKHARI</strong>
-                    <small className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[#d3e4eb]">smudasir256@gmail.com</small>
+            {user ? (
+              <details className="group relative">
+                <summary className="flex cursor-pointer list-none items-center gap-2 whitespace-nowrap rounded-[10px] py-[3px] pl-0.5 pr-[5px] hover:bg-[#e7edf3] group-open:bg-[#e7edf3] [&::-webkit-details-marker]:hidden" aria-label="Open account menu">
+                  <span className="size-[38px] overflow-hidden rounded-full bg-[linear-gradient(135deg,var(--color-brand-orange),#ff9f1c)]">
+                    <UserAvatar className="h-full w-full object-cover" src={avatarSrc} alt={displayName} size={38} />
                   </span>
-                </div>
-                <div className="py-[10px] [&_a]:flex [&_a]:min-h-[54px] [&_a]:items-center [&_a]:gap-4 [&_a]:px-[22px] [&_a]:py-2 [&_a]:text-[15px] [&_a]:font-bold [&_a]:text-[#2d3a4c] [&_a:hover]:bg-[#f7f9fb] [&_a:hover]:text-brand-orange [&_svg]:size-[23px] [&_svg]:text-[#758191]">
-                  <Link href="/account/profile"><UserRound /><span>My Profile</span></Link>
-                  <Link href="/account/marketplace-listings"><Package /><span>My Ads</span></Link>
-                  <Link href="/account/favorites"><Heart /><span>Favorites</span></Link>
-                  <Link href="/account/buyer-requests"><ShoppingBag /><span>Buyer requests</span></Link>
-                  <Link href="/account/my-buyer-requests"><ShoppingBag /><span>My buyer requests</span></Link>
-                </div>
-                <Link className="flex min-h-[68px] items-center gap-[15px] border-t border-[#e8ecf0] px-6 py-3 text-[15px] font-black text-[#d60019] hover:bg-[#fff7f8] [&_svg]:size-[23px]" href="/login">
-                  <LogOut /><span>Logout</span>
-                </Link>
-              </nav>
-            </details>
+                  <span className="max-[1050px]:hidden">
+                    <strong className="block text-[10px] text-[#24344a]">My Account</strong>
+                    <small className="mt-0.5 block max-w-[90px] overflow-hidden text-ellipsis whitespace-nowrap text-[8px] text-[#8a95a5]">{displayName}</small>
+                  </span>
+                  <ChevronDown className="text-[#6e7b8d] transition-transform duration-200 group-open:rotate-180 max-[1050px]:hidden" size={15} />
+                </summary>
+                <nav className="absolute right-0 top-[calc(100%+17px)] w-[340px] overflow-hidden rounded-[20px] border border-[#dbe3e9] bg-white shadow-[0_20px_48px_#04182f38]" aria-label="Account menu">
+                  <div className="flex min-h-[105px] items-center gap-[15px] bg-[linear-gradient(135deg,#006184,#004763)] px-[22px] py-5 text-white">
+                    <UserAvatar className="size-[62px] shrink-0 rounded-full object-cover" src={avatarSrc} alt={displayName} size={62} />
+                    <span className="min-w-0">
+                      <strong className="block overflow-hidden text-ellipsis whitespace-nowrap text-base tracking-[.2px]">{displayName}</strong>
+                      <small className="mt-1.5 block overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[#d3e4eb]">{displayEmail}</small>
+                    </span>
+                  </div>
+                  <div className="py-[10px] [&_a]:flex [&_a]:min-h-[54px] [&_a]:items-center [&_a]:gap-4 [&_a]:px-[22px] [&_a]:py-2 [&_a]:text-[15px] [&_a]:font-bold [&_a]:text-[#2d3a4c] [&_a:hover]:bg-[#f7f9fb] [&_a:hover]:text-brand-orange [&_svg]:size-[23px] [&_svg]:text-[#758191]">
+                    <Link href="/account/profile"><UserRound /><span>My Profile</span></Link>
+                    <Link href="/account/marketplace-listings"><Package /><span>My Ads</span></Link>
+                    <Link href="/account/favorites"><Heart /><span>Favorites</span></Link>
+                    <Link href="/account/buyer-requests"><ShoppingBag /><span>Buyer requests</span></Link>
+                    <Link href="/account/my-buyer-requests"><ShoppingBag /><span>My buyer requests</span></Link>
+                  </div>
+                  <LogoutButton className="flex min-h-[68px] w-full items-center gap-[15px] border-t border-[#e8ecf0] bg-transparent px-6 py-3 text-left text-[15px] font-black text-[#d60019] hover:bg-[#fff7f8] [&_svg]:size-[23px]">
+                    <LogOut /><span>Logout</span>
+                  </LogoutButton>
+                </nav>
+              </details>
+            ) : (
+              <Link className="whitespace-nowrap rounded-[9px] border border-[#d5dde7] bg-white px-[15px] py-3 text-xs font-extrabold text-[#24344a] hover:border-[#8a9aa8]" href="/login">
+                Log in
+              </Link>
+            )}
           </div>
           <details className="mobile-menu group relative hidden max-[760px]:block">
             <summary className="grid size-[52px] cursor-pointer list-none place-items-center rounded-[17px] border-2 border-[#6f8492] bg-[#dce5ea] text-[#0d1b2f] shadow-[inset_0_0_0_2px_#ffffff78] group-open:bg-white [&::-webkit-details-marker]:hidden" aria-label="Open navigation menu">
@@ -120,13 +132,19 @@ export function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
               <X className="hidden group-open:block" size={29} />
             </summary>
             <nav className="fixed inset-x-[14px] top-[94px] grid max-h-[calc(100dvh-96px)] gap-[9px] overflow-y-auto rounded-b-[22px] border border-t-0 border-[#ffffffb8] bg-[rgba(224,231,235,.96)] px-[14px] pb-[14px] pt-4 shadow-[0_18px_38px_#04182f3b] backdrop-blur-[20px]" aria-label="Mobile menu">
-              <div className="flex min-h-20 items-center gap-[13px] rounded-[18px] bg-[linear-gradient(135deg,#006184,#004763)] px-4 py-[10px] text-white shadow-[0_8px_18px_#00486324]">
-                <Image className="size-[54px] max-w-none shrink-0 rounded-full object-cover" src={profileAvatar} alt="Syed Mudasir Bukhari" />
-                <span>
-                  <strong className="block text-[15px] tracking-[.1px]">SYED MUDASIR BUKHARI</strong>
-                  <small className="mt-[3px] block text-[11px] text-[#d2e5ec]">smudasir256@gmail.com</small>
-                </span>
-              </div>
+              {user ? (
+                <div className="flex min-h-20 items-center gap-[13px] rounded-[18px] bg-[linear-gradient(135deg,#006184,#004763)] px-4 py-[10px] text-white shadow-[0_8px_18px_#00486324]">
+                  <UserAvatar className="size-[54px] max-w-none shrink-0 rounded-full object-cover" src={avatarSrc} alt={displayName} size={54} />
+                  <span>
+                    <strong className="block text-[15px] tracking-[.1px]">{displayName}</strong>
+                    <small className="mt-[3px] block text-[11px] text-[#d2e5ec]">{displayEmail}</small>
+                  </span>
+                </div>
+              ) : (
+                <Link className="flex min-h-20 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#006184,#004763)] px-4 text-[15px] font-black text-white shadow-[0_8px_18px_#00486324]" href="/login">
+                  Log in / Sign up
+                </Link>
+              )}
               <Link className="flex min-h-[58px] items-center justify-center gap-2 rounded-[15px] bg-[#ff6314] p-2 text-[17px] font-black text-white shadow-[0_7px_15px_#e74c1338]" href={store ? "/store" : "/post-ad"}>
                 <span className="text-[25px] font-light leading-none">＋</span>{store ? "Shop Now" : "Post Ad"}
               </Link>
@@ -139,7 +157,15 @@ export function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
                 <Link href="/account/messages"><MessageCircle /><span>Messages</span></Link>
                 <Link href="/account/settings"><Settings /><span>Settings</span></Link>
               </div>
-              <Link className="flex min-h-[52px] items-center justify-center gap-2 rounded-[15px] bg-[#fff6f7] text-sm font-black text-[#d40018] [&_svg]:w-[21px]" href="/login"><LogOut /><span>Logout</span></Link>
+              {user ? (
+                <LogoutButton className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-0 bg-[#fff6f7] text-sm font-black text-[#d40018] [&_svg]:w-[21px]">
+                  <LogOut /><span>Logout</span>
+                </LogoutButton>
+              ) : (
+                <Link className="flex min-h-[52px] items-center justify-center gap-2 rounded-[15px] bg-[#fff6f7] text-sm font-black text-[#d40018]" href="/login">
+                  Log in
+                </Link>
+              )}
               <details className="group/categories border-t border-[#ffffffb8] pt-[9px]">
                 <summary className="flex min-h-[52px] cursor-pointer list-none items-center justify-between rounded-[15px] border border-[#e1e6e9] bg-white px-[17px] text-sm font-black text-[#273344] [&::-webkit-details-marker]:hidden"><span>Categories</span><ChevronDown className="w-5 transition-transform duration-200 group-open/categories:rotate-180" /></summary>
                 <div className="mt-[7px] grid max-h-60 overflow-y-auto rounded-[15px] bg-[rgba(255,255,255,.93)] p-[5px]">

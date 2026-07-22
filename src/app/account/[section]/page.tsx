@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getAuthUser } from "@/lib/auth";
 import { accountHref, accountNavigation } from "@/lib/account-navigation";
 
 const sections = {
@@ -13,7 +14,7 @@ const sections = {
     description: "View and manage your personal account information.",
     icon: UserRound,
     emptyTitle: "Your profile",
-    emptyCopy: "Syed Mudasir Bukhari · smudasir256@gmail.com",
+    emptyCopy: "Your name and email will appear here once you are signed in.",
   },
   "marketplace-listings": {
     title: "My Ads",
@@ -103,7 +104,12 @@ export default async function AccountSectionPage({
 
   if (!content) notFound();
 
+  const user = await getAuthUser();
   const Icon = content.icon;
+  const emptyCopy =
+    section === "profile" && user
+      ? `${user.fullName} · ${user.email}`
+      : content.emptyCopy;
 
   return (
     <>
@@ -133,7 +139,7 @@ export default async function AccountSectionPage({
               <div>
                 <Icon className="mx-auto mb-3.5 text-orange" size={42} />
                 <strong className="block text-navy">{content.emptyTitle}</strong>
-                <p>{content.emptyCopy}</p>
+                <p>{emptyCopy}</p>
               </div>
             </div>
           </section>

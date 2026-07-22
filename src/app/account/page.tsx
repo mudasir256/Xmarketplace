@@ -2,9 +2,13 @@ import Link from "next/link";
 import { Bell, Heart, MessageCircle, Package, ShoppingBag } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getAuthUser } from "@/lib/auth";
 import { accountHref, accountNavigation } from "@/lib/account-navigation";
 
-export default function AccountPage() {
+export default async function AccountPage() {
+  const user = await getAuthUser();
+  const firstName = user?.fullName.split(" ")[0] || "there";
+
   return (
     <>
       <SiteHeader />
@@ -27,7 +31,7 @@ export default function AccountPage() {
           </aside>
           <section className="rounded-2xl border border-line bg-white p-7">
             <span className="text-[13px] text-muted">My account</span>
-            <h1 className="my-[5px] text-navy">Welcome back, Customer</h1>
+            <h1 className="my-[5px] text-navy">Welcome back, {firstName}</h1>
             <p className="mt-1.5 text-muted">Manage your marketplace activity and official store orders in one place.</p>
             <div className="mt-[22px] grid grid-cols-4 gap-3.5 max-[760px]:grid-cols-2">
               <div className="rounded-xl border border-line p-[18px]"><ShoppingBag className="text-orange" /><span className="text-xs text-muted">Active listings</span><strong className="mt-2 block text-[25px] text-navy">3</strong></div>
