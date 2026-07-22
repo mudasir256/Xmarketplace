@@ -1,6 +1,8 @@
 import { LISTING_IMAGE_BUCKET, listingConditionLabel } from "@/lib/marketplace";
 import type { MarketplaceListingCard, MarketplaceListingDetail } from "@/lib/listing-types";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getUserAvatarUrl, getUserDisplayName, getInitialsAvatarDataUrl, normalizeAvatarUrl } from "@/lib/user-display";
 
 export type { MarketplaceListingCard, MarketplaceListingDetail } from "@/lib/listing-types";
 export { relativeListingTime } from "@/lib/listing-types";
@@ -56,6 +58,7 @@ function mapListingCard(row: ListingRow): MarketplaceListingCard {
   const images = sortedImagePaths(row);
   return {
     id: row.slug,
+    listingId: row.id,
     title: row.title,
     price: formatPrice(row.price),
     image: listingImageUrl(images[0]),
@@ -80,7 +83,6 @@ function mapListingDetail(
 
   return {
     ...card,
-    listingId: row.id,
     images: images.length ? images : [listingImageUrl(null)],
     conditionLabel: listingConditionLabel(row.condition),
     postedDateLabel: new Date(row.created_at).toLocaleDateString("en-US", {
@@ -91,7 +93,9 @@ function mapListingDetail(
     seller: {
       name: profile?.full_name?.trim() || "Marketplace Seller",
       phone,
-      avatarUrl: profile?.avatar_path || null,
+      avatarUrl:
+        normalizeAvatarUrl(profile?.avatar_path) ||
+        getInitialsAvatarDataUrl(profile?.full_name?.trim() || "Seller"),
     },
     details: [
       { label: "Category", value: category.name },
@@ -126,24 +130,17 @@ async function fetchVisibleListingRows(options?: {
   limit?: number;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
+  // Public catalog: everyone (signed in or not) only sees published ads.
   let query = supabase
     .from("marketplace_listings")
     .select(listingSelect)
+    .eq("status", "PUBLISHED")
     .order("created_at", { ascending: false });
 
   if (options?.slug) query = query.eq("slug", options.slug);
   if (options?.city) query = query.ilike("city", options.city);
   if (options?.limit) query = query.limit(options.limit);
-
-  if (user) {
-    query = query.or(`status.eq.PUBLISHED,user_id.eq.${user.id}`);
-  } else {
-    query = query.eq("status", "PUBLISHED");
-  }
 
   const { data, error } = await query;
   if (error) {
@@ -177,12 +174,51 @@ export async function getMarketplaceListingBySlug(slug: string) {
   const row = rows[0];
   if (!row) return null;
 
-  const supabase = await createClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, phone, avatar_path")
-    .eq("id", row.user_id)
-    .maybeSingle();
+  let profile: { full_name: string | null; phone: string | null; avatar_path: string | null } | null = null;
+
+  try {
+    const admin = createAdminClient();
+    const [{ data: existing }, authResult] = await Promise.all([
+      admin.from("profiles").select("full_name, phone, avatar_path").eq("id", row.user_id).maybeSingle(),
+      admin.auth.admin.getUserById(row.user_id),
+    ]);
+
+    const authUser = authResult.data.user;
+    const authName = authUser ? getUserDisplayName(authUser) : null;
+    const authAvatar = authUser ? getUserAvatarUrl(authUser) : null;
+
+    // Always prefer live auth avatar/name so Google photos show on ads.
+    const fullName = authName || existing?.full_name?.trim() || "Marketplace Seller";
+    const avatarPath = authAvatar || normalizeAvatarUrl(existing?.avatar_path) || null;
+
+    profile = {
+      full_name: fullName,
+      phone: existing?.phone ?? null,
+      avatar_path: avatarPath,
+    };
+
+    if (authUser) {
+      await admin.from("profiles").upsert(
+        {
+          id: row.user_id,
+          email: authUser.email ?? null,
+          full_name: fullName,
+          avatar_path: avatarPath,
+          phone: existing?.phone ?? null,
+        },
+        { onConflict: "id" },
+      );
+    }
+  } catch (error) {
+    console.error("Failed to load seller profile", error);
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, phone, avatar_path")
+      .eq("id", row.user_id)
+      .maybeSingle();
+    profile = data;
+  }
 
   return mapListingDetail(row, profile);
 }

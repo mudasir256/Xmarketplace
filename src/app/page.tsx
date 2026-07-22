@@ -8,6 +8,7 @@ import { CatalogCard } from "@/components/catalog-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getMarketplaceListings } from "@/lib/listings";
+import { getFavoriteListingIds } from "@/lib/favorites";
 import animalsImage from "@/images/animals.png";
 import bikeImage from "@/images/Bike.png";
 import vehicleImage from "@/images/car-new.png";
@@ -54,9 +55,13 @@ export default async function MarketplaceHome({
   searchParams: Promise<{ city?: string }>;
 }) {
   const { city } = await searchParams;
-  const listings = await getMarketplaceListings({
-    city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
-  });
+  const [listings, favoriteIds] = await Promise.all([
+    getMarketplaceListings({
+      city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
+    }),
+    getFavoriteListingIds(),
+  ]);
+  const favoriteSet = new Set(favoriteIds);
 
   const sectionsWithAds = listingSections
     .map((section) => ({
@@ -132,7 +137,13 @@ export default async function MarketplaceHome({
                     <Link className="text-sm font-extrabold whitespace-nowrap text-orange" href={`/category/${section.slug}`}>View All →</Link>
                   </div>
                   <div className="grid grid-cols-4 gap-[18px] max-[1050px]:grid-cols-3 max-[760px]:grid-cols-2 max-[760px]:gap-2.5">
-                    {section.items.map((item) => <CatalogCard item={item} key={item.id} />)}
+                    {section.items.map((item) => (
+                      <CatalogCard
+                        item={item}
+                        key={item.id}
+                        favorited={favoriteSet.has(item.listingId)}
+                      />
+                    ))}
                   </div>
                 </section>
               ))

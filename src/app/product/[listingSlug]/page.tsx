@@ -3,22 +3,26 @@ import { notFound } from "next/navigation";
 import {
   Clock3,
   FileText,
-  Heart,
   ListChecks,
   MapPin,
   Share2,
   ShieldAlert,
 } from "lucide-react";
+import { FavoriteButton } from "@/components/favorite-button";
 import { ListingGallery } from "@/components/listing-gallery";
 import { ListingSellerPanel } from "@/components/listing-seller-panel";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getFavoriteListingIds } from "@/lib/favorites";
 import { getMarketplaceListingBySlug } from "@/lib/listings";
 
 export default async function ListingPage({ params }: { params: Promise<{ listingSlug: string }> }) {
   const { listingSlug } = await params;
   const listing = await getMarketplaceListingBySlug(listingSlug);
   if (!listing) notFound();
+
+  const favoriteIds = await getFavoriteListingIds();
+  const isFavorited = favoriteIds.includes(listing.listingId);
 
   return (
     <>
@@ -43,13 +47,12 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
               >
                 <Share2 size={17} />
               </button>
-              <button
-                type="button"
-                aria-label="Save listing"
-                className="grid size-10 place-items-center rounded-full border border-line bg-white text-navy"
-              >
-                <Heart size={17} />
-              </button>
+              <FavoriteButton
+                listingId={listing.listingId}
+                initialFavorited={isFavorited}
+                iconSize={17}
+                className="grid size-10 place-items-center rounded-full border border-line bg-white text-navy disabled:opacity-70"
+              />
             </div>
           </div>
 
@@ -137,6 +140,9 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
                 sellerName={listing.seller.name}
                 phone={listing.seller.phone}
                 avatarUrl={listing.seller.avatarUrl}
+                listingSlug={listing.id}
+                listingTitle={listing.title}
+                listingImage={listing.images[0] || listing.image}
               />
             </div>
           </div>

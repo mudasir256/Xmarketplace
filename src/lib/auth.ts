@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserAvatarUrl, getUserDisplayName } from "@/lib/user-display";
 
 export type AuthUserView = {
   id: string;
@@ -21,26 +22,10 @@ export async function getAuthUser(): Promise<AuthUserView | null> {
 
   if (!user) return null;
 
-  const meta = user.user_metadata ?? {};
-  const identityData = user.identities?.find((identity) => identity.provider === "google")?.identity_data;
-  const fullName =
-    (typeof meta.full_name === "string" && meta.full_name) ||
-    (typeof meta.name === "string" && meta.name) ||
-    (typeof identityData?.full_name === "string" && identityData.full_name) ||
-    (typeof identityData?.name === "string" && identityData.name) ||
-    user.email?.split("@")[0] ||
-    "Account";
-  const avatarUrl =
-    (typeof meta.avatar_url === "string" && meta.avatar_url) ||
-    (typeof meta.picture === "string" && meta.picture) ||
-    (typeof identityData?.avatar_url === "string" && identityData.avatar_url) ||
-    (typeof identityData?.picture === "string" && identityData.picture) ||
-    null;
-
   return {
     id: user.id,
     email: user.email ?? "",
-    fullName,
-    avatarUrl,
+    fullName: getUserDisplayName(user),
+    avatarUrl: getUserAvatarUrl(user),
   };
 }

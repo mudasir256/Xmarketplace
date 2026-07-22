@@ -3,19 +3,23 @@
 import type { CatalogItem } from "@/lib/catalog";
 import { relativeListingTime, type MarketplaceListingCard } from "@/lib/listing-types";
 import Link from "next/link";
-import { Heart, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { FavoriteButton } from "@/components/favorite-button";
 
 export function CatalogCard({
   item,
   store = false,
+  favorited = false,
 }: {
   item: CatalogItem | MarketplaceListingCard;
   store?: boolean;
+  favorited?: boolean;
 }) {
   const href = store ? `/store/product/${item.id}` : `/product/${item.id}`;
   const postedLabel = store
     ? "In stock"
     : relativeListingTime("createdAt" in item ? item.createdAt : undefined);
+  const listingId = "listingId" in item ? item.listingId : null;
 
   return (
     <article className="group relative overflow-hidden rounded-[14px] border border-brand-line bg-white transition duration-200 ease-out hover:-translate-y-[3px] hover:shadow-[0_14px_30px_#0a234214]">
@@ -28,17 +32,13 @@ export function CatalogCard({
             {item.badge}
           </span>
         )}
-        <button
-          type="button"
-          className="absolute right-[11px] top-[11px] z-20 grid size-[34px] place-items-center rounded-full border-0 bg-white text-brand-navy shadow-[0_3px_9px_#0002]"
-          aria-label={`Save ${item.title}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-        >
-          <Heart size={17} />
-        </button>
+        {!store && listingId ? (
+          <FavoriteButton
+            listingId={listingId}
+            initialFavorited={favorited}
+            className="absolute right-[11px] top-[11px] z-20 grid size-[34px] place-items-center rounded-full border-0 bg-white text-brand-navy shadow-[0_3px_9px_#0002] disabled:opacity-70"
+          />
+        ) : null}
       </div>
       <div className="p-[15px] max-[760px]:p-3">
         <div className="flex items-center justify-between text-[11px] text-brand-muted">

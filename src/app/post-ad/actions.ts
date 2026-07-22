@@ -1,6 +1,8 @@
 "use server";
 
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   isValidPkContactNumber,
   LISTING_CONDITIONS,
@@ -12,8 +14,7 @@ import {
   normalizeListingCondition,
   slugifyTitle,
 } from "@/lib/marketplace";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getUserAvatarUrl, getUserDisplayName } from "@/lib/user-display";
 
 const conditionValues = LISTING_CONDITIONS.map((item) => item.value) as [
   (typeof LISTING_CONDITIONS)[number]["value"],
@@ -142,11 +143,8 @@ export async function submitMarketplaceAd(_prev: PostAdState, formData: FormData
     {
       id: user.id,
       email: user.email ?? null,
-      full_name:
-        (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
-        (typeof user.user_metadata?.name === "string" && user.user_metadata.name) ||
-        user.email?.split("@")[0] ||
-        "Seller",
+      full_name: getUserDisplayName(user),
+      avatar_path: getUserAvatarUrl(user),
     },
     { onConflict: "id" },
   );

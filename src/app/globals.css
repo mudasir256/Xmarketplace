@@ -195,6 +195,15 @@
   bottom: 22%;
 }
 
+.chat-doodle {
+  background-color: #eef2f6;
+  background-image:
+    radial-gradient(#c9d3de 1.2px, transparent 1.2px),
+    radial-gradient(#d5dde7 1px, transparent 1px);
+  background-position: 0 0, 12px 12px;
+  background-size: 28px 28px;
+}
+
 @media (max-width: 760px) {
   body {
     padding-bottom: calc(110px + env(safe-area-inset-bottom));

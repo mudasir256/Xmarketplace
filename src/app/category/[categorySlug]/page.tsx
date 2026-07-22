@@ -3,6 +3,7 @@ import { CatalogCard } from "@/components/catalog-card";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getMarketplaceListings } from "@/lib/listings";
+import { getFavoriteListingIds } from "@/lib/favorites";
 import { MARKETPLACE_CATEGORIES, MARKETPLACE_CITIES } from "@/lib/marketplace";
 
 export default async function CategoryPage({
@@ -40,6 +41,8 @@ export default async function CategoryPage({
     categorySlug,
     city,
   });
+  const favoriteIds = await getFavoriteListingIds();
+  const favoriteSet = new Set(favoriteIds);
 
   return (
     <>
@@ -125,7 +128,7 @@ export default async function CategoryPage({
           ) : (
             <div className="grid grid-cols-4 gap-[18px] max-[1050px]:grid-cols-3 max-[760px]:grid-cols-2 max-[760px]:gap-2.5">
               {items.map((item) => (
-                <CatalogCard item={item} key={item.id} />
+                <CatalogCard item={item} key={item.id} favorited={favoriteSet.has(item.listingId)} />
               ))}
             </div>
           )}

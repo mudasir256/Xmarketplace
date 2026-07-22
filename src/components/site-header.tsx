@@ -83,7 +83,7 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
               {store ? <ShoppingCart size={19} /> : <ShoppingBag size={19} />}
               {store && <b className="absolute -top-1.5 right-0 grid size-[17px] place-items-center rounded-full bg-brand-orange text-[9px] font-extrabold text-white">2</b>}
             </Link>
-            <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden" href="/account/messages"><MessageCircle size={19} /></Link>
+            <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden" href="/messages"><MessageCircle size={19} /></Link>
             <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden" href="/account/notifications"><Bell size={19} /></Link>
             <Link className="whitespace-nowrap rounded-[9px] bg-brand-orange px-[17px] py-3 text-xs font-extrabold text-white shadow-[0_5px_14px_#ff4d1230] hover:-translate-y-px hover:bg-brand-orange-dark" href={store ? "/store" : "/post-ad"}>
               {store ? "Shop Now" : "+  Post Ad"}
@@ -154,7 +154,7 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
                 <Link href="/account/favorites"><Heart /><span>Favorites</span></Link>
                 <Link href="/account/buyer-requests"><ShoppingBag /><span>Buyer requests</span></Link>
                 <Link href="/account/my-buyer-requests"><ShoppingBag /><span>My buyer requests</span></Link>
-                <Link href="/account/messages"><MessageCircle /><span>Messages</span></Link>
+                <Link href="/messages"><MessageCircle /><span>Messages</span></Link>
                 <Link href="/account/settings"><Settings /><span>Settings</span></Link>
               </div>
               {user ? (
@@ -191,7 +191,7 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
         <Link href="/account/notifications" aria-label="Notifications"><Bell /></Link>
         <Link className="!size-[68px] -translate-y-[31px] place-self-start rounded-full border-[6px] border-[#edf1f4] bg-[linear-gradient(145deg,#ff743f,var(--color-brand-orange))] !text-white shadow-[0_8px_18px_#ff4d1248] active:-translate-y-[29px] active:scale-96 active:bg-[linear-gradient(145deg,var(--color-brand-orange),var(--color-brand-orange-dark))] [&_svg]:!size-[31px]" href="/post-ad" aria-label="Post an ad"><Plus /></Link>
         <Link href={store ? "/store/wishlist" : "/account/favorites"} aria-label="Favorites"><Heart /></Link>
-        <Link href="/account/messages" aria-label="Messages"><MessageCircle /></Link>
+        <Link href="/messages" aria-label="Messages"><MessageCircle /></Link>
       </nav>
     </>
   );

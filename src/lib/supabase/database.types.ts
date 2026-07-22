@@ -101,6 +101,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          category_id?: string;
           title?: string;
           slug?: string;
           description?: string;
@@ -138,6 +139,25 @@ export type Database = {
           alt_text?: string | null;
           display_order?: number;
           is_primary?: boolean;
+        };
+        Relationships: [];
+      };
+      marketplace_favorites: {
+        Row: {
+          id: string;
+          user_id: string;
+          listing_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          listing_id: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          listing_id?: string;
         };
         Relationships: [];
       };
@@ -180,6 +200,191 @@ export type Database = {
           compare_at_price?: number | null;
           product_status?: string;
           is_featured?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      addresses: {
+        Row: {
+          id: string;
+          user_id: string;
+          full_name: string;
+          phone: string;
+          province: string;
+          city: string;
+          area: string | null;
+          street_address: string;
+          postal_code: string | null;
+          landmark: string | null;
+          is_default_shipping: boolean;
+          is_default_billing: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          full_name: string;
+          phone: string;
+          province: string;
+          city: string;
+          area?: string | null;
+          street_address: string;
+          postal_code?: string | null;
+          landmark?: string | null;
+          is_default_shipping?: boolean;
+          is_default_billing?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          full_name?: string;
+          phone?: string;
+          province?: string;
+          city?: string;
+          area?: string | null;
+          street_address?: string;
+          postal_code?: string | null;
+          landmark?: string | null;
+          is_default_shipping?: boolean;
+          is_default_billing?: boolean;
+        };
+        Relationships: [];
+      };
+      store_orders: {
+        Row: {
+          id: string;
+          order_number: string;
+          user_id: string;
+          status: string;
+          payment_status: string;
+          grand_total: number;
+          currency: string;
+          placed_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_number: string;
+          user_id: string;
+          status?: string;
+          payment_status?: string;
+          grand_total: number;
+          currency?: string;
+          placed_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          status?: string;
+          payment_status?: string;
+          grand_total?: number;
+        };
+        Relationships: [];
+      };
+      buyer_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string;
+          category_slug: string | null;
+          city: string | null;
+          budget_min: number | null;
+          budget_max: number | null;
+          contact_number: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          description: string;
+          category_slug?: string | null;
+          city?: string | null;
+          budget_min?: number | null;
+          budget_max?: number | null;
+          contact_number?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string;
+          category_slug?: string | null;
+          city?: string | null;
+          budget_min?: number | null;
+          budget_max?: number | null;
+          contact_number?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          body: string;
+          link_path: string | null;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          body: string;
+          link_path?: string | null;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          is_read?: boolean;
+          title?: string;
+          body?: string;
+          link_path?: string | null;
+        };
+        Relationships: [];
+      };
+      store_wishlist: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          product_id: string;
+          created_at?: string;
+        };
+        Update: {
+          product_id?: string;
+        };
+        Relationships: [];
+      };
+      account_settings: {
+        Row: {
+          user_id: string;
+          email_notifications: boolean;
+          sms_notifications: boolean;
+          profile_visibility: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          email_notifications?: boolean;
+          sms_notifications?: boolean;
+          profile_visibility?: string;
+          updated_at?: string;
+        };
+        Update: {
+          email_notifications?: boolean;
+          sms_notifications?: boolean;
+          profile_visibility?: string;
           updated_at?: string;
         };
         Relationships: [];

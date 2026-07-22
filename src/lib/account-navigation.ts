@@ -14,5 +14,6 @@ export const accountNavigation = [
 ] as const;
 
 export function accountHref(slug: string) {
+  if (slug === "messages") return "/messages";
   return slug ? `/account/${slug}` : "/account";
 }

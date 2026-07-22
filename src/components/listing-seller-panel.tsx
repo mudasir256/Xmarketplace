@@ -1,18 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { Flag, MessageCircle, Phone, UserRound } from "lucide-react";
+import { UserAvatar } from "@/components/user-avatar";
 
 export function ListingSellerPanel({
   sellerName,
   phone,
   avatarUrl,
+  listingSlug,
+  listingTitle,
+  listingImage,
 }: {
   sellerName: string;
   phone: string | null;
   avatarUrl: string | null;
+  listingSlug: string;
+  listingTitle: string;
+  listingImage: string;
 }) {
   const telHref = phone ? `tel:${phone}` : undefined;
-  const chatHref = phone ? `https://wa.me/${phone.replace(/^\+/, "").replace(/^0/, "92")}` : undefined;
+  const chatHref = `/messages?listing=${encodeURIComponent(listingSlug)}&title=${encodeURIComponent(listingTitle)}&image=${encodeURIComponent(listingImage)}&seller=${encodeURIComponent(sellerName)}`;
 
   return (
     <aside className="rounded-[18px] border border-line bg-white p-4 shadow-[0_8px_24px_#04182f0d]">
@@ -24,16 +32,16 @@ export function ListingSellerPanel({
       </div>
 
       <div className="mb-4 flex items-center gap-3">
-        <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e8eef5] text-navy">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <UserRound size={22} />
-          )}
+        <div className="size-12 shrink-0 overflow-hidden rounded-full bg-[#e8eef5] ring-2 ring-[#edf1f5]">
+          <UserAvatar
+            src={avatarUrl}
+            alt={sellerName}
+            size={48}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="min-w-0">
-          <p className="m-0 truncate text-[15px] font-extrabold text-navy">{sellerName}</p>
+          <p className="m-0 truncate text-[15px] font-extrabold capitalize text-navy">{sellerName}</p>
           <p className="m-0 truncate text-sm text-muted">{phone || "Number on request"}</p>
         </div>
       </div>
@@ -55,24 +63,12 @@ export function ListingSellerPanel({
             <Phone size={17} /> Call
           </button>
         )}
-        {chatHref ? (
-          <a
-            href={chatHref}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange px-3 text-sm font-extrabold text-white"
-          >
-            <MessageCircle size={17} /> Chat
-          </a>
-        ) : (
-          <button
-            type="button"
-            disabled
-            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange/70 px-3 text-sm font-extrabold text-white"
-          >
-            <MessageCircle size={17} /> Chat
-          </button>
-        )}
+        <Link
+          href={chatHref}
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-orange px-3 text-sm font-extrabold text-white"
+        >
+          <MessageCircle size={17} /> Chat
+        </Link>
       </div>
 
       <button

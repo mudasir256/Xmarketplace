@@ -1,6 +1,7 @@
 import type { CatalogItem } from "@/lib/catalog";
 
 export type MarketplaceListingCard = CatalogItem & {
+  listingId: string;
   description?: string;
   contactNumber?: string | null;
   createdAt?: string;
@@ -8,7 +9,6 @@ export type MarketplaceListingCard = CatalogItem & {
 };
 
 export type MarketplaceListingDetail = MarketplaceListingCard & {
-  listingId: string;
   images: string[];
   conditionLabel: string;
   postedDateLabel: string;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/auth-utils";
+import { getUserAvatarUrl, getUserDisplayName } from "@/lib/user-display";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -26,6 +28,27 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (!exchangeError) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+          const admin = createAdminClient();
+          await admin.from("profiles").upsert(
+            {
+              id: user.id,
+              email: user.email ?? null,
+              full_name: getUserDisplayName(user),
+              avatar_path: getUserAvatarUrl(user),
+            },
+            { onConflict: "id" },
+          );
+        } catch (profileError) {
+          console.error("Failed to sync profile on auth callback", profileError);
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
