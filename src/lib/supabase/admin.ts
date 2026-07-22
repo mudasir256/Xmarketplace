@@ -1,14 +1,23 @@
-import "server-only";
+/**
+ * Service-role Supabase client. Bypasses RLS — server / Node only.
+ * Avoid `server-only`: custom Socket.IO server (tsx) imports chat → admin.
+ */
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { getPublicSupabaseUrl, getServiceRoleKey } from "@/lib/env";
 
+function assertServerRuntime() {
+  if (typeof window !== "undefined") {
+    throw new Error("Admin Supabase client cannot be used in the browser");
+  }
+}
+
 /**
- * Service-role client. Bypasses RLS — server routes / actions only.
- * Never expose SUPABASE_SERVICE_ROLE_KEY to the browser.
+ * Service-role client. Never expose SUPABASE_SERVICE_ROLE_KEY to the browser.
  */
 export function createAdminClient() {
+  assertServerRuntime();
   const url = getPublicSupabaseUrl();
   const key = getServiceRoleKey();
 
