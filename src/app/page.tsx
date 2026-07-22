@@ -42,12 +42,19 @@ export default async function MarketplaceHome({
   searchParams: Promise<{ city?: string }>;
 }) {
   const { city } = await searchParams;
-  const [listings, favoriteIds] = await Promise.all([
-    getMarketplaceListings({
-      city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
-    }),
-    getFavoriteListingIds(),
-  ]);
+  let listings: Awaited<ReturnType<typeof getMarketplaceListings>> = [];
+  let favoriteIds: string[] = [];
+
+  try {
+    [listings, favoriteIds] = await Promise.all([
+      getMarketplaceListings({
+        city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
+      }),
+      getFavoriteListingIds(),
+    ]);
+  } catch (error) {
+    console.error("Home page data failed", error);
+  }
 
   return (
     <>

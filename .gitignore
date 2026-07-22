@@ -5,9 +5,10 @@ node_modules/
 .next/
 out/
 
-# env
+# env — never commit real secrets
 .env
-.env*.local
+.env.*
+!.env.example
 
 # misc
 .DS_Store

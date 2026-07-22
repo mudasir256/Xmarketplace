@@ -1,6 +1,8 @@
 import { LISTING_IMAGE_BUCKET, listingConditionLabel } from "@/lib/marketplace";
 import type { MarketplaceListingCard, MarketplaceListingDetail } from "@/lib/listing-types";
+import { isSupabaseConfigured } from "@/lib/env-public";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { getUserAvatarUrl, getUserDisplayName, getInitialsAvatarDataUrl, normalizeAvatarUrl } from "@/lib/user-display";
 
@@ -129,35 +131,42 @@ async function fetchVisibleListingRows(options?: {
   slug?: string;
   limit?: number;
 }) {
-  const supabase = await createClient();
+  try {
+    if (!isSupabaseConfigured()) return [] as ListingRow[];
 
-  // Public catalog: everyone (signed in or not) only sees published ads.
-  let query = supabase
-    .from("marketplace_listings")
-    .select(listingSelect)
-    .eq("status", "PUBLISHED")
-    .order("created_at", { ascending: false });
+    const supabase = createPublicClient();
 
-  if (options?.slug) query = query.eq("slug", options.slug);
-  if (options?.city) query = query.ilike("city", options.city);
-  if (options?.limit) query = query.limit(options.limit);
+    // Public catalog: everyone (signed in or not) only sees published ads.
+    let query = supabase
+      .from("marketplace_listings")
+      .select(listingSelect)
+      .eq("status", "PUBLISHED")
+      .order("created_at", { ascending: false });
 
-  const { data, error } = await query;
-  if (error) {
+    if (options?.slug) query = query.eq("slug", options.slug);
+    if (options?.city) query = query.ilike("city", options.city);
+    if (options?.limit) query = query.limit(options.limit);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("Failed to load marketplace listings", error.message);
+      return [] as ListingRow[];
+    }
+
+    let rows = (data ?? []) as unknown as ListingRow[];
+
+    if (options?.categorySlug && options.categorySlug !== "all") {
+      rows = rows.filter((row) => categoryOf(row).slug === options.categorySlug);
+    }
+    if (options?.categorySlug === "featured") {
+      rows = rows.filter((row) => row.is_featured);
+    }
+
+    return rows;
+  } catch (error) {
     console.error("Failed to load marketplace listings", error);
     return [] as ListingRow[];
   }
-
-  let rows = (data ?? []) as unknown as ListingRow[];
-
-  if (options?.categorySlug && options.categorySlug !== "all") {
-    rows = rows.filter((row) => categoryOf(row).slug === options.categorySlug);
-  }
-  if (options?.categorySlug === "featured") {
-    rows = rows.filter((row) => row.is_featured);
-  }
-
-  return rows;
 }
 
 export async function getMarketplaceListings(options?: {

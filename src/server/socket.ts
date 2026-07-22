@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { createClient } from "@supabase/supabase-js";
 import { Server, type Socket } from "socket.io";
+import { getAppUrl, getPublicSupabaseAnonKey, getPublicSupabaseUrl } from "@/lib/env-public";
 import { mapChatError } from "@/lib/chat/errors";
 import { checkRateLimit } from "@/lib/chat/rate-limit";
 import {
@@ -61,8 +62,8 @@ function isOnline(userId: string) {
 }
 
 async function verifyAccessToken(token: string) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = getPublicSupabaseUrl();
+  const anon = getPublicSupabaseAnonKey();
   if (!url || !anon) throw new Error("Missing Supabase env");
 
   const supabase = createClient(url, anon, {
@@ -114,7 +115,7 @@ export function createChatSocketServer(httpServer: HttpServer) {
   const io = new Server(httpServer, {
     path: "/api/socketio",
     cors: {
-      origin: process.env.NEXT_PUBLIC_APP_URL || true,
+      origin: getAppUrl() || true,
       credentials: true,
     },
     connectionStateRecovery: {

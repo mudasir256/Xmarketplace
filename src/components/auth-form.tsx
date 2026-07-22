@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import logo from "../../xmarketplacelogo.png";
 import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/env-public";
 import {
   authQueryErrors,
   getPasswordIssues,
@@ -86,9 +87,7 @@ export function AuthForm({
   );
 
   const copy = content[mode];
-  const configured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+  const configured = isSupabaseConfigured();
   const strength = useMemo(() => passwordStrength(password), [password]);
   const needsEmail = mode !== "update-password";
   const needsPassword = mode !== "forgot-password";

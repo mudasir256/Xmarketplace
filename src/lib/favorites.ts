@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getMarketplaceListings } from "@/lib/listings";
+import { isSupabaseConfigured } from "@/lib/env-public";
 import type { MarketplaceListingCard } from "@/lib/listing-types";
 
 export type ToggleFavoriteResult = {
@@ -13,13 +14,15 @@ export type ToggleFavoriteResult = {
 };
 
 export async function getFavoriteListingIds(): Promise<string[]> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
   try {
+    if (!isSupabaseConfigured()) return [];
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
     const admin = createAdminClient();
     const { data, error } = await admin
       .from("marketplace_favorites")
@@ -27,7 +30,7 @@ export async function getFavoriteListingIds(): Promise<string[]> {
       .eq("user_id", user.id);
 
     if (error) {
-      console.error("Failed to load favorites", error);
+      console.error("Failed to load favorites", error.message);
       return [];
     }
 

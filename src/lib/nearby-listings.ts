@@ -1,8 +1,8 @@
 import { listingImageUrl } from "@/lib/listings";
 import { haversineKm } from "@/lib/location";
 import type { MarketplaceListingCard } from "@/lib/listing-types";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { tryCreateAdminClient } from "@/lib/supabase/admin";
+import { tryCreatePublicClient } from "@/lib/supabase/public";
 
 export type NearbyListing = MarketplaceListingCard & {
   distanceKm: number;
@@ -63,7 +63,9 @@ async function findNearbyWithFallback(options: {
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 48));
   const offset = (page - 1) * pageSize;
 
-  const supabase = await createClient();
+  const supabase = tryCreatePublicClient();
+  if (!supabase) return { listings: [], total: 0 };
+
   let query = supabase
     .from("marketplace_listings")
     .select(
@@ -93,7 +95,7 @@ async function findNearbyWithFallback(options: {
 
   const { data, error } = await query;
   if (error || !data) {
-    console.error("Nearby fallback failed", error);
+    console.error("Nearby fallback failed", error?.message);
     return { listings: [], total: 0 };
   }
 
@@ -187,7 +189,12 @@ export async function findNearbyListings(options: {
   const offset = (page - 1) * pageSize;
 
   try {
-    const admin = createAdminClient();
+    const admin = tryCreateAdminClient();
+    if (!admin) {
+      const fallback = await findNearbyWithFallback(options);
+      return { ...fallback, source: "fallback" as const };
+    }
+
     const { data, error } = await admin.rpc("nearby_marketplace_listings", {
       p_lat: options.latitude,
       p_lng: options.longitude,
@@ -205,7 +212,7 @@ export async function findNearbyListings(options: {
       return { listings, total: listings.length, source: "rpc" as const };
     }
 
-    console.error("nearby_marketplace_listings RPC failed", error);
+    console.error("nearby_marketplace_listings RPC failed", error?.message);
   } catch (error) {
     console.error("nearby RPC unavailable", error);
   }

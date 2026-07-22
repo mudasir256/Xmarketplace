@@ -1,9 +1,11 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/supabase/database.types";
+import { getPublicSupabaseAnonKey, getPublicSupabaseUrl, isSupabaseConfigured } from "@/lib/env-public";
 
 export function createClient() {
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured");
+  }
+
+  return createBrowserClient<Database>(getPublicSupabaseUrl()!, getPublicSupabaseAnonKey()!);
 }

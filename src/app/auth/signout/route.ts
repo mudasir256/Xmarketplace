@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/env-public";
 
 export async function POST(request: NextRequest) {
   const origin = new URL(request.url).origin;
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!isSupabaseConfigured()) {
     return NextResponse.redirect(`${origin}/login`, { status: 303 });
   }
 

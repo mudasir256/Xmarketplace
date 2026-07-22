@@ -182,30 +182,59 @@ export async function submitMarketplaceAd(_prev: PostAdState, formData: FormData
   const area = areaFromForm || fallback.area;
 
   // Service role bypasses RLS so PUBLISHED inserts work even if policies are outdated.
-  const { data: listing, error: listingError } = await admin
-    .from("marketplace_listings")
-    .insert({
-      user_id: user.id,
-      category_id: parsed.data.categoryId,
-      title: parsed.data.title,
-      slug,
-      description: parsed.data.description,
-      price: parsed.data.price,
-      condition: normalizeListingCondition(parsed.data.condition),
-      contact_number: contactNumber,
-      city: parsed.data.city,
-      area,
-      latitude,
-      longitude,
-      status: "PUBLISHED",
-      published_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
+  const listingPayload = {
+    user_id: user.id,
+    category_id: parsed.data.categoryId,
+    title: parsed.data.title,
+    slug,
+    description: parsed.data.description,
+    price: parsed.data.price,
+    condition: normalizeListingCondition(parsed.data.condition),
+    contact_number: contactNumber,
+    city: parsed.data.city,
+    area,
+    latitude,
+    longitude,
+    status: "PUBLISHED" as const,
+    published_at: new Date().toISOString(),
+  };
+
+  let listing: { id: string } | null = null;
+  let listingError: { message?: string; code?: string; details?: string; hint?: string } | null = null;
+
+  {
+    const result = await admin.from("marketplace_listings").insert(listingPayload).select("id").single();
+    listing = result.data;
+    listingError = result.error;
+  }
+
+  // Older Supabase projects may be missing area/lat/lng — retry without them so posting still works.
+  const missingLocationColumn =
+    listingError &&
+    /area|latitude|longitude|schema cache|Could not find/i.test(
+      `${listingError.message ?? ""} ${listingError.details ?? ""} ${listingError.hint ?? ""}`,
+    );
+
+  if (missingLocationColumn) {
+    console.warn(
+      "marketplace_listings is missing location columns. Run: npm run db:locations (or supabase/fix_listing_area.sql)",
+      listingError,
+    );
+    const { area: _area, latitude: _lat, longitude: _lng, ...withoutLocation } = listingPayload;
+    const retry = await admin.from("marketplace_listings").insert(withoutLocation).select("id").single();
+    listing = retry.data;
+    listingError = retry.error;
+  }
 
   if (listingError || !listing) {
     console.error("Failed to create listing", listingError);
-    return emptyState(listingError?.message || "Could not create your ad. Please try again.");
+    const message = listingError?.message || "Could not create your ad. Please try again.";
+    if (/area|latitude|longitude|schema cache|Could not find/i.test(message)) {
+      return emptyState(
+        "Your database is missing location columns (area/latitude/longitude). In Supabase SQL Editor run supabase/fix_listing_area.sql, then try again.",
+      );
+    }
+    return emptyState(message);
   }
 
   const uploadedPaths: string[] = [];

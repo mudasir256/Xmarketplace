@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserAvatarUrl, getUserDisplayName } from "@/lib/user-display";
+import { isSupabaseConfigured } from "@/lib/env-public";
 
 export type AuthUserView = {
   id: string;
@@ -8,24 +9,25 @@ export type AuthUserView = {
   avatarUrl: string | null;
 };
 
-function isConfigured() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
-
 export async function getAuthUser(): Promise<AuthUserView | null> {
-  if (!isConfigured()) return null;
+  if (!isSupabaseConfigured()) return null;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) return null;
+    if (!user) return null;
 
-  return {
-    id: user.id,
-    email: user.email ?? "",
-    fullName: getUserDisplayName(user),
-    avatarUrl: getUserAvatarUrl(user),
-  };
+    return {
+      id: user.id,
+      email: user.email ?? "",
+      fullName: getUserDisplayName(user),
+      avatarUrl: getUserAvatarUrl(user),
+    };
+  } catch (error) {
+    console.error("Auth lookup failed", error);
+    return null;
+  }
 }
