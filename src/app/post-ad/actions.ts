@@ -171,6 +171,15 @@ export async function submitMarketplaceAd(_prev: PostAdState, formData: FormData
 
   const slug = slugifyTitle(parsed.data.title);
   const contactNumber = normalizeContactNumber(parsed.data.contactNumber);
+  const latitudeRaw = Number(formData.get("latitude"));
+  const longitudeRaw = Number(formData.get("longitude"));
+  const areaFromForm = String(formData.get("area") ?? "").trim() || null;
+
+  const { cityCenter } = await import("@/lib/location");
+  const fallback = cityCenter(parsed.data.city);
+  const latitude = Number.isFinite(latitudeRaw) ? latitudeRaw : fallback.latitude;
+  const longitude = Number.isFinite(longitudeRaw) ? longitudeRaw : fallback.longitude;
+  const area = areaFromForm || fallback.area;
 
   // Service role bypasses RLS so PUBLISHED inserts work even if policies are outdated.
   const { data: listing, error: listingError } = await admin
@@ -185,6 +194,9 @@ export async function submitMarketplaceAd(_prev: PostAdState, formData: FormData
       condition: normalizeListingCondition(parsed.data.condition),
       contact_number: contactNumber,
       city: parsed.data.city,
+      area,
+      latitude,
+      longitude,
       status: "PUBLISHED",
       published_at: new Date().toISOString(),
     })

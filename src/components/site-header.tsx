@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Bell, ChevronDown, Heart, LogOut, MapPin, Menu, MessageCircle,
+  Bell, ChevronDown, Heart, LogOut, Menu, MessageCircle,
   Package, Plus, Search, Settings, ShoppingBag, ShoppingCart, UserRound, X,
 } from "lucide-react";
 import logo from "../../xmarketplacelogo.png";
@@ -17,6 +17,7 @@ import fashionImage from "@/images/Fashion.png";
 import servicesImage from "@/images/services.png";
 import { getAuthUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
+import { LocationButton } from "@/components/location/location-button";
 import { UserAvatar } from "@/components/user-avatar";
 
 const mobileCategories = [
@@ -74,7 +75,7 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
             <Search className="shrink-0 text-[#9aa6b5]" size={17} />
             <input className="min-w-[70px] flex-1 border-0 bg-transparent p-0 text-xs text-brand-ink outline-0" name="q" aria-label="Search" placeholder={store ? "Search official products..." : "Search products..."} />
           </form>
-          <button className="flex h-[43px] items-center justify-center gap-2 whitespace-nowrap rounded-[9px] border border-[#d5dde7] bg-white px-[13px] text-xs font-extrabold text-[#24344a] max-[760px]:hidden"><MapPin size={15} /><span>Location</span></button>
+          <LocationButton />
           <div className="flex items-center gap-2 max-[760px]:hidden">
             <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3]" href={store ? "/store/wishlist" : "/account/favorites"}>
               <Heart size={19} />

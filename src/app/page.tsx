@@ -4,7 +4,7 @@ import {
   ArrowRight, Box, LayoutGrid, Star,
 } from "lucide-react";
 import { AdSlider } from "@/components/ad-slider";
-import { CatalogCard } from "@/components/catalog-card";
+import { HomeLocationListings } from "@/components/location/home-location-listings";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getMarketplaceListings } from "@/lib/listings";
@@ -36,19 +36,6 @@ const categories = [
 
 const popularCities = ["Rawalpindi", "Islamabad", "Lahore", "Faisalabad"];
 
-const listingSections = [
-  { title: "Vehicles", slug: "vehicles" },
-  { title: "Bikes", slug: "bikes" },
-  { title: "Property Sale", slug: "property-sale" },
-  { title: "Property Rent", slug: "property-rent" },
-  { title: "Mobiles", slug: "mobiles" },
-  { title: "Electronics", slug: "electronics" },
-  { title: "Furniture", slug: "furniture" },
-  { title: "Animals", slug: "animals" },
-  { title: "Fashion", slug: "fashion" },
-  { title: "Services", slug: "services" },
-];
-
 export default async function MarketplaceHome({
   searchParams,
 }: {
@@ -61,14 +48,6 @@ export default async function MarketplaceHome({
     }),
     getFavoriteListingIds(),
   ]);
-  const favoriteSet = new Set(favoriteIds);
-
-  const sectionsWithAds = listingSections
-    .map((section) => ({
-      ...section,
-      items: listings.filter((item) => item.category === section.title).slice(0, 4),
-    }))
-    .filter((section) => section.items.length > 0);
 
   return (
     <>
@@ -116,38 +95,7 @@ export default async function MarketplaceHome({
               </div>
             </div>
 
-            {sectionsWithAds.length === 0 ? (
-              <section className="rounded-2xl border border-dashed border-line bg-white px-6 py-16 text-center">
-                <h2 className="m-0 text-[clamp(22px,2.5vw,28px)] tracking-[-0.7px] text-navy">No ads yet</h2>
-                <p className="mx-auto mt-2 mb-6 max-w-md text-sm text-muted">
-                  Demo listings are removed. Ads you post will show up here by category.
-                </p>
-                <Link
-                  className="inline-flex min-h-12 items-center gap-[9px] rounded-[9px] bg-orange px-5 text-[13px] font-black text-white shadow-[0_8px_20px_#ff4d1247] transition hover:-translate-y-0.5 hover:bg-orange-dark"
-                  href="/post-ad"
-                >
-                  Post your first ad <ArrowRight size={18} />
-                </Link>
-              </section>
-            ) : (
-              sectionsWithAds.map((section) => (
-                <section className="pt-[38px] max-[760px]:pt-[30px]" key={section.slug}>
-                  <div className="mb-[18px] flex items-center justify-between gap-5">
-                    <h2 className="m-0 text-[clamp(22px,2.5vw,28px)] tracking-[-0.7px] text-navy">{section.title}</h2>
-                    <Link className="text-sm font-extrabold whitespace-nowrap text-orange" href={`/category/${section.slug}`}>View All →</Link>
-                  </div>
-                  <div className="grid grid-cols-4 gap-[18px] max-[1050px]:grid-cols-3 max-[760px]:grid-cols-2 max-[760px]:gap-2.5">
-                    {section.items.map((item) => (
-                      <CatalogCard
-                        item={item}
-                        key={item.id}
-                        favorited={favoriteSet.has(item.listingId)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ))
-            )}
+            <HomeLocationListings initialListings={listings} favoriteIds={favoriteIds} />
           </div>
         </section>
 

@@ -102,6 +102,24 @@ export function PostAdForm({ categories }: { categories: CategoryOption[] }) {
     }
 
     photos.forEach((photo) => formData.append("photos", photo.file));
+
+    try {
+      const raw = window.localStorage.getItem("selectedLocation");
+      if (raw) {
+        const location = JSON.parse(raw) as {
+          latitude?: number;
+          longitude?: number;
+          area?: string;
+          city?: string;
+        };
+        if (typeof location.latitude === "number") formData.set("latitude", String(location.latitude));
+        if (typeof location.longitude === "number") formData.set("longitude", String(location.longitude));
+        if (location.area) formData.set("area", location.area);
+      }
+    } catch {
+      // Ignore invalid stored location.
+    }
+
     startTransition(() => {
       formAction(formData);
     });

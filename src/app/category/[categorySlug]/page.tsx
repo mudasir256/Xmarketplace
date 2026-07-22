@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CatalogCard } from "@/components/catalog-card";
+import { LocationAwareListings } from "@/components/location/location-aware-listings";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getMarketplaceListings } from "@/lib/listings";
@@ -32,9 +32,9 @@ export default async function CategoryPage({
     categorySlug === "all"
       ? city
         ? `Listings posted in ${city}`
-        : "Listings from every city on X Marketplace"
+        : "Listings near your selected location"
       : known
-        ? `All ${known.name.toLowerCase()} ads on X Marketplace`
+        ? `${known.name} ads near your selected location`
         : "Browse marketplace ads";
 
   const items = await getMarketplaceListings({
@@ -42,7 +42,6 @@ export default async function CategoryPage({
     city,
   });
   const favoriteIds = await getFavoriteListingIds();
-  const favoriteSet = new Set(favoriteIds);
 
   return (
     <>
@@ -60,9 +59,7 @@ export default async function CategoryPage({
           <div className="mb-5 flex items-end justify-between gap-5">
             <div>
               <h2 className="m-0 text-[clamp(22px,3vw,30px)] tracking-[-0.7px] text-navy">{title}</h2>
-              <p className="mt-1.5 mb-0 text-sm text-muted">
-                {items.length} listing{items.length === 1 ? "" : "s"} · {subtitle}
-              </p>
+              <p className="mt-1.5 mb-0 text-sm text-muted">{subtitle}</p>
             </div>
           </div>
 
@@ -118,20 +115,12 @@ export default async function CategoryPage({
             </div>
           ) : null}
 
-          {items.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line bg-white px-6 py-16 text-center">
-              <p className="m-0 text-sm text-muted">No posted ads here yet.</p>
-              <Link className="mt-4 inline-flex font-extrabold text-orange" href="/post-ad">
-                Post an ad →
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-[18px] max-[1050px]:grid-cols-3 max-[760px]:grid-cols-2 max-[760px]:gap-2.5">
-              {items.map((item) => (
-                <CatalogCard item={item} key={item.id} favorited={favoriteSet.has(item.listingId)} />
-              ))}
-            </div>
-          )}
+          <LocationAwareListings
+            initialListings={items}
+            favoriteIds={favoriteIds}
+            categorySlug={categorySlug}
+            mode="category"
+          />
         </div>
       </main>
       <SiteFooter />

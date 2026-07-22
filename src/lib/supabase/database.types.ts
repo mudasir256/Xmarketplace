@@ -12,6 +12,7 @@ export type Database = {
           avatar_path: string | null;
           role: string;
           account_status: string;
+          preferred_location: unknown | null;
           created_at: string;
           updated_at: string;
         };
@@ -23,6 +24,7 @@ export type Database = {
           avatar_path?: string | null;
           role?: string;
           account_status?: string;
+          preferred_location?: unknown | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -33,6 +35,7 @@ export type Database = {
           avatar_path?: string | null;
           role?: string;
           account_status?: string;
+          preferred_location?: unknown | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -77,6 +80,9 @@ export type Database = {
           status: string;
           city: string | null;
           is_featured: boolean;
+          latitude: number | null;
+          longitude: number | null;
+          area: string | null;
           published_at: string | null;
           expires_at: string | null;
           created_at: string;
@@ -95,6 +101,9 @@ export type Database = {
           status?: string;
           city?: string | null;
           is_featured?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
+          area?: string | null;
           published_at?: string | null;
           expires_at?: string | null;
           created_at?: string;
@@ -111,6 +120,9 @@ export type Database = {
           status?: string;
           city?: string | null;
           is_featured?: boolean;
+          latitude?: number | null;
+          longitude?: number | null;
+          area?: string | null;
           published_at?: string | null;
           expires_at?: string | null;
           updated_at?: string;
@@ -391,7 +403,36 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      nearby_marketplace_listings: {
+        Args: {
+          p_lat: number;
+          p_lng: number;
+          p_radius_km?: number;
+          p_category_slug?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          user_id: string;
+          title: string;
+          slug: string;
+          description: string;
+          price: number | null;
+          condition: string | null;
+          city: string | null;
+          area: string | null;
+          contact_number: string | null;
+          is_featured: boolean;
+          created_at: string;
+          category_name: string;
+          category_slug: string;
+          primary_image_path: string | null;
+          distance_km: number;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
