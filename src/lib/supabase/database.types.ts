@@ -401,6 +401,169 @@ export type Database = {
         };
         Relationships: [];
       };
+      conversations: {
+        Row: {
+          id: string;
+          listing_id: string;
+          buyer_id: string;
+          seller_id: string;
+          last_message_id: string | null;
+          last_message_at: string | null;
+          buyer_archived_at: string | null;
+          seller_archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          listing_id: string;
+          buyer_id: string;
+          seller_id: string;
+          last_message_id?: string | null;
+          last_message_at?: string | null;
+          buyer_archived_at?: string | null;
+          seller_archived_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          last_message_id?: string | null;
+          last_message_at?: string | null;
+          buyer_archived_at?: string | null;
+          seller_archived_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          client_message_id: string;
+          message_type: string;
+          body: string | null;
+          reply_to_message_id: string | null;
+          delivered_at: string | null;
+          read_at: string | null;
+          edited_at: string | null;
+          deleted_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          client_message_id: string;
+          message_type?: string;
+          body?: string | null;
+          reply_to_message_id?: string | null;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          edited_at?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          body?: string | null;
+          delivered_at?: string | null;
+          read_at?: string | null;
+          edited_at?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      conversation_read_state: {
+        Row: {
+          conversation_id: string;
+          user_id: string;
+          last_read_message_id: string | null;
+          last_read_at: string;
+        };
+        Insert: {
+          conversation_id: string;
+          user_id: string;
+          last_read_message_id?: string | null;
+          last_read_at?: string;
+        };
+        Update: {
+          last_read_message_id?: string | null;
+          last_read_at?: string;
+        };
+        Relationships: [];
+      };
+      message_attachments: {
+        Row: {
+          id: string;
+          message_id: string;
+          storage_key: string;
+          original_name: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          message_id: string;
+          storage_key: string;
+          original_name: string;
+          mime_type: string;
+          size_bytes: number;
+          created_at?: string;
+        };
+        Update: {
+          storage_key?: string;
+          original_name?: string;
+          mime_type?: string;
+          size_bytes?: number;
+        };
+        Relationships: [];
+      };
+      user_blocks: {
+        Row: {
+          blocker_id: string;
+          blocked_id: string;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          blocker_id: string;
+          blocked_id: string;
+          reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          reason?: string | null;
+        };
+        Relationships: [];
+      };
+      chat_reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          reported_user_id: string;
+          conversation_id: string | null;
+          message_id: string | null;
+          reason: string;
+          details: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          reported_user_id: string;
+          conversation_id?: string | null;
+          message_id?: string | null;
+          reason: string;
+          details?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          reason?: string;
+          details?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

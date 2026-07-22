@@ -17,12 +17,18 @@ cp .env.example .env.local
    - Paste and run `supabase/setup_post_ad.sql` (one-shot setup for profiles, categories, listings, contact number, and photo storage)
    - Or run the files in `supabase/migrations/` in order if you prefer incremental migrations
 
-4. Start the app:
+4. Apply chat schema (conversations, messages, blocks, attachments):
+   - Paste and run `supabase/setup_chat.sql` in the SQL Editor
+   - Or run `supabase/migrations/202607220010_chat.sql`
+
+5. Start the app (custom server includes Socket.IO on `/api/socketio`):
 
 ```bash
 npm install
 npm run dev
 ```
+
+> Chat requires `npm run dev` / `npm start` (tsx `server.ts`). Plain `next dev` serves REST only — realtime sockets will not connect.
 
 ## Auth (email + Google)
 

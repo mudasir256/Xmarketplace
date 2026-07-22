@@ -169,6 +169,63 @@ export async function getMarketplaceListings(options?: {
   return rows.map(mapListingCard);
 }
 
+function tokenizeSearchQuery(query: string) {
+  return query
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+}
+
+function listingSearchScore(row: ListingRow, tokens: string[]) {
+  if (!tokens.length) return 0;
+
+  const category = categoryOf(row);
+  const title = row.title.toLowerCase();
+  const description = (row.description || "").toLowerCase();
+  const city = (row.city || "").toLowerCase();
+  const categoryName = category.name.toLowerCase();
+  const categorySlug = category.slug.toLowerCase();
+  const condition = (row.condition || "").toLowerCase();
+  const haystack = `${title} ${description} ${city} ${categoryName} ${categorySlug} ${condition}`;
+
+  let score = 0;
+  for (const token of tokens) {
+    if (!haystack.includes(token)) return 0;
+    if (title.includes(token)) score += 8;
+    if (categoryName.includes(token) || categorySlug.includes(token)) score += 3;
+    if (city.includes(token)) score += 2;
+    if (condition.includes(token)) score += 1;
+    if (description.includes(token)) score += 1;
+    // Prefer exact whole-word-ish title hits
+    if (title.split(/[^\p{L}\p{N}]+/u).includes(token)) score += 4;
+  }
+
+  // Bonus when the full phrase appears in the title
+  const phrase = tokens.join(" ");
+  if (phrase.length > 1 && title.includes(phrase)) score += 10;
+
+  return score;
+}
+
+/** Rank published listings by matching search words in title, description, city, and category. */
+export async function searchMarketplaceListings(query: string, options?: { limit?: number }) {
+  const tokens = tokenizeSearchQuery(query);
+  if (!tokens.length) return [] as MarketplaceListingCard[];
+
+  const rows = await fetchVisibleListingRows({ limit: options?.limit ? options.limit * 4 : undefined });
+  const ranked = rows
+    .map((row) => ({ row, score: listingSearchScore(row, tokens) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.row.created_at.localeCompare(a.row.created_at);
+    });
+
+  const limited = options?.limit ? ranked.slice(0, options.limit) : ranked;
+  return limited.map((item) => mapListingCard(item.row));
+}
+
 export async function getMarketplaceListingBySlug(slug: string) {
   const rows = await fetchVisibleListingRows({ slug, limit: 1 });
   const row = rows[0];

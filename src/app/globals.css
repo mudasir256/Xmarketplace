@@ -25,6 +25,24 @@
     scroll-behavior: smooth;
   }
 
+  html:has([data-chat-page]),
+  body:has([data-chat-page]) {
+    overscroll-behavior: none;
+  }
+
+  @media (max-width: 760px) {
+    html:has([data-chat-page]),
+    body:has([data-chat-page]) {
+      overflow: hidden;
+      height: 100%;
+    }
+
+    /* Keep chat composer clear of the floating + / bottom nav */
+    body:has([data-chat-page]) .mobile-bottom-nav {
+      display: none !important;
+    }
+  }
+
   body {
     background: white;
     color: var(--color-ink);

@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Bell, ChevronDown, Heart, LogOut, Menu, MessageCircle,
+  Bell, ChevronDown, Heart, LogOut, Menu,
   Package, Plus, Search, Settings, ShoppingBag, ShoppingCart, UserRound, X,
 } from "lucide-react";
-import logo from "../../xmarketplacelogo.png";
+import logo from "@/images/logo.png";
 import bikeImage from "@/images/Bike.png";
 import propertySaleImage from "@/images/PropertyforSale.png";
 import propertyRentImage from "@/images/PropertyforRent.png";
@@ -19,6 +19,7 @@ import { getAuthUser } from "@/lib/auth";
 import { LogoutButton } from "@/components/logout-button";
 import { LocationButton } from "@/components/location/location-button";
 import { UserAvatar } from "@/components/user-avatar";
+import { MessagesNavLink } from "@/components/chat/messages-nav-link";
 
 const mobileCategories = [
   { name: "Vehicles", slug: "vehicles", image: vehicleImage },
@@ -71,9 +72,12 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
               ))}
             </nav>
           </details>
-          <form className="flex h-[43px] min-w-[125px] flex-[1_1_180px] items-center gap-2 overflow-hidden rounded-[9px] border border-[#d5dde7] bg-[#eef2f6] px-3 max-[760px]:hidden" action="/search">
+          <form className="flex h-[43px] min-w-[125px] flex-[1_1_180px] items-center gap-2 overflow-hidden rounded-[9px] border border-[#d5dde7] bg-[#eef2f6] px-3 max-[760px]:hidden" action="/search" method="get" role="search">
             <Search className="shrink-0 text-[#9aa6b5]" size={17} />
             <input className="min-w-[70px] flex-1 border-0 bg-transparent p-0 text-xs text-brand-ink outline-0" name="q" aria-label="Search" placeholder={store ? "Search official products..." : "Search products..."} />
+            <button type="submit" className="sr-only">
+              Search
+            </button>
           </form>
           <LocationButton />
           <div className="flex items-center gap-2 max-[760px]:hidden">
@@ -84,7 +88,11 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
               {store ? <ShoppingCart size={19} /> : <ShoppingBag size={19} />}
               {store && <b className="absolute -top-1.5 right-0 grid size-[17px] place-items-center rounded-full bg-brand-orange text-[9px] font-extrabold text-white">2</b>}
             </Link>
-            <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden" href="/messages"><MessageCircle size={19} /></Link>
+            <MessagesNavLink
+              signedIn={Boolean(user)}
+              className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden"
+              badgeClassName="top-1 right-0.5"
+            />
             <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden" href="/account/notifications"><Bell size={19} /></Link>
             <Link className="whitespace-nowrap rounded-[9px] bg-brand-orange px-[17px] py-3 text-xs font-extrabold text-white shadow-[0_5px_14px_#ff4d1230] hover:-translate-y-px hover:bg-brand-orange-dark" href={store ? "/store" : "/post-ad"}>
               {store ? "Shop Now" : "+  Post Ad"}
@@ -155,7 +163,7 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
                 <Link href="/account/favorites"><Heart /><span>Favorites</span></Link>
                 <Link href="/account/buyer-requests"><ShoppingBag /><span>Buyer requests</span></Link>
                 <Link href="/account/my-buyer-requests"><ShoppingBag /><span>My buyer requests</span></Link>
-                <Link href="/messages"><MessageCircle /><span>Messages</span></Link>
+                <MessagesNavLink signedIn={Boolean(user)} showLabel className="flex min-h-12 items-center gap-[14px] rounded-[9px] px-[9px] py-1.5 text-sm font-bold text-[#273344] hover:bg-[#fff4ef] hover:text-brand-orange [&_svg]:size-[22px] [&_svg]:text-[#74808d]" badgeClassName="top-3 left-7" />
                 <Link href="/account/settings"><Settings /><span>Settings</span></Link>
               </div>
               {user ? (
@@ -192,7 +200,11 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
         <Link href="/account/notifications" aria-label="Notifications"><Bell /></Link>
         <Link className="!size-[68px] -translate-y-[31px] place-self-start rounded-full border-[6px] border-[#edf1f4] bg-[linear-gradient(145deg,#ff743f,var(--color-brand-orange))] !text-white shadow-[0_8px_18px_#ff4d1248] active:-translate-y-[29px] active:scale-96 active:bg-[linear-gradient(145deg,var(--color-brand-orange),var(--color-brand-orange-dark))] [&_svg]:!size-[31px]" href="/post-ad" aria-label="Post an ad"><Plus /></Link>
         <Link href={store ? "/store/wishlist" : "/account/favorites"} aria-label="Favorites"><Heart /></Link>
-        <Link href="/messages" aria-label="Messages"><MessageCircle /></Link>
+        <MessagesNavLink
+          signedIn={Boolean(user)}
+          className="relative grid h-[58px] w-full place-items-center rounded-[18px] text-[#273344] active:bg-[#fff0ea] active:text-brand-orange [&_svg]:size-[27px]"
+          badgeClassName="top-2.5 right-[calc(50%-18px)]"
+        />
       </nav>
     </>
   );

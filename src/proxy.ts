@@ -35,13 +35,18 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isApiAccount = path.startsWith("/api/account");
+  const isApiChat =
+    path.startsWith("/api/conversations") ||
+    path.startsWith("/api/chat") ||
+    path.startsWith("/api/messages") ||
+    (path.startsWith("/api/users/") && path.endsWith("/block"));
   const isProtected =
     path.startsWith("/account") ||
     path === "/post-ad" ||
     path === "/messages" ||
     path === "/update-password";
 
-  if (!user && isApiAccount) {
+  if (!user && (isApiAccount || isApiChat)) {
     return copyCookies(
       response,
       NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 }),
