@@ -210,26 +210,116 @@ async function getProfiles(ids: string[]) {
 }
 
 async function unreadCountFor(admin: Admin, conversationId: string, userId: string) {
-  const { data: readState } = await admin
+  const map = await batchUnreadCounts(admin, [conversationId], userId);
+  return map[conversationId] ?? 0;
+}
+
+/** Batch unread counts for many conversations (2–3 queries total, not N+1). */
+async function batchUnreadCounts(admin: Admin, conversationIds: string[], userId: string) {
+  const byConversation: Record<string, number> = {};
+  for (const id of conversationIds) byConversation[id] = 0;
+  if (!conversationIds.length) return byConversation;
+
+  const { data: readStates } = await admin
     .from("conversation_read_state")
-    .select("last_read_at")
-    .eq("conversation_id", conversationId)
+    .select("conversation_id, last_read_at")
     .eq("user_id", userId)
-    .maybeSingle();
+    .in("conversation_id", conversationIds);
+
+  const readAtByConvo = new Map<string, string>();
+  for (const row of readStates ?? []) {
+    if (row.last_read_at) readAtByConvo.set(row.conversation_id, row.last_read_at);
+  }
+
+  let oldestWatermark: string | null = null;
+  let anyNeverRead = false;
+  for (const id of conversationIds) {
+    const at = readAtByConvo.get(id);
+    if (!at) {
+      anyNeverRead = true;
+      break;
+    }
+    if (!oldestWatermark || at < oldestWatermark) oldestWatermark = at;
+  }
 
   let query = admin
     .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("conversation_id", conversationId)
+    .select("conversation_id, created_at")
+    .in("conversation_id", conversationIds)
     .neq("sender_id", userId)
     .is("deleted_at", null);
 
-  if (readState?.last_read_at) {
-    query = query.gt("created_at", readState.last_read_at);
+  if (!anyNeverRead && oldestWatermark) {
+    query = query.gt("created_at", oldestWatermark);
   }
 
-  const { count } = await query;
-  return count ?? 0;
+  const { data: messages } = await query;
+  for (const msg of messages ?? []) {
+    const lastRead = readAtByConvo.get(msg.conversation_id);
+    if (!lastRead || msg.created_at > lastRead) {
+      byConversation[msg.conversation_id] = (byConversation[msg.conversation_id] ?? 0) + 1;
+    }
+  }
+
+  return byConversation;
+}
+
+async function batchListings(listingIds: string[]) {
+  const unique = [...new Set(listingIds.filter(Boolean))];
+  const map = new Map<
+    string,
+    { title: string; slug: string; image: string }
+  >();
+  if (!unique.length) return map;
+
+  const admin = db();
+  const { data: listings } = await admin
+    .from("marketplace_listings")
+    .select("id, title, slug")
+    .in("id", unique);
+
+  const { data: images } = await admin
+    .from("marketplace_listing_images")
+    .select("listing_id, storage_path, is_primary, display_order")
+    .in("listing_id", unique)
+    .order("display_order", { ascending: true });
+
+  const imagesByListing = new Map<
+    string,
+    { storage_path: string; is_primary: boolean; display_order: number }[]
+  >();
+  for (const row of images ?? []) {
+    const list = imagesByListing.get(row.listing_id) ?? [];
+    list.push(row);
+    imagesByListing.set(row.listing_id, list);
+  }
+
+  for (const listing of listings ?? []) {
+    map.set(listing.id, {
+      title: listing.title,
+      slug: listing.slug,
+      image: primaryListingImage(imagesByListing.get(listing.id) ?? []),
+    });
+  }
+  return map;
+}
+
+async function batchLastMessages(messageIds: string[]) {
+  const unique = [...new Set(messageIds.filter(Boolean))];
+  const map = new Map<string, ChatMessage>();
+  if (!unique.length) return map;
+
+  const admin = db();
+  const { data } = await admin.from("messages").select("*").in("id", unique);
+  const rows = (data ?? []) as MessageRow[];
+  const attachments = await loadAttachments(
+    admin,
+    rows.map((row) => row.id),
+  );
+  for (const row of rows) {
+    map.set(row.id, mapMessage(row, attachments.get(row.id) ?? []));
+  }
+  return map;
 }
 
 async function mapConversationSummary(
@@ -391,7 +481,38 @@ export async function listConversations(userId: string) {
     if (row.seller_id === userId) return !row.seller_archived_at;
     return false;
   });
-  return Promise.all(rows.map((row) => mapConversationSummary(row, userId)));
+  if (!rows.length) return [];
+
+  const peerIds = rows.map((row) => (row.buyer_id === userId ? row.seller_id : row.buyer_id));
+  const [listings, lastMessages, profiles, unreadMap] = await Promise.all([
+    batchListings(rows.map((row) => row.listing_id)),
+    batchLastMessages(rows.map((row) => row.last_message_id).filter(Boolean) as string[]),
+    getProfiles(peerIds),
+    batchUnreadCounts(
+      admin,
+      rows.map((row) => row.id),
+      userId,
+    ),
+  ]);
+
+  return Promise.all(
+    rows.map((row) => {
+      const peerId = row.buyer_id === userId ? row.seller_id : row.buyer_id;
+      const listing = listings.get(row.listing_id) ?? {
+        title: "Listing",
+        slug: row.listing_id,
+        image: "/placeholder-listing.svg",
+      };
+      return mapConversationSummary(row, userId, {
+        listing,
+        lastMessage: row.last_message_id
+          ? (lastMessages.get(row.last_message_id) ?? null)
+          : null,
+        peer: profiles.get(peerId) ?? { full_name: null, avatar_path: null },
+        unreadCount: unreadMap[row.id] ?? 0,
+      });
+    }),
+  );
 }
 
 export async function archiveConversation(conversationId: string, userId: string) {
@@ -762,13 +883,28 @@ export async function editMessage(messageId: string, userId: string, body: strin
 }
 
 export async function getUnreadCount(userId: string) {
-  const conversations = await listConversations(userId);
-  const byConversation: Record<string, number> = {};
+  const admin = db();
+  const { data, error } = await admin
+    .from("conversations")
+    .select("id, buyer_id, seller_id, buyer_archived_at, seller_archived_at")
+    .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
+
+  if (error) throw new ChatError("INTERNAL_ERROR", error.message, 500);
+
+  const ids = ((data ?? []) as Pick<
+    ConversationRow,
+    "id" | "buyer_id" | "seller_id" | "buyer_archived_at" | "seller_archived_at"
+  >[])
+    .filter((row) => {
+      if (row.buyer_id === userId) return !row.buyer_archived_at;
+      if (row.seller_id === userId) return !row.seller_archived_at;
+      return false;
+    })
+    .map((row) => row.id);
+
+  const byConversation = await batchUnreadCounts(admin, ids, userId);
   let total = 0;
-  for (const conversation of conversations) {
-    byConversation[conversation.id] = conversation.unreadCount;
-    total += conversation.unreadCount;
-  }
+  for (const count of Object.values(byConversation)) total += count;
   return { total, byConversation };
 }
 

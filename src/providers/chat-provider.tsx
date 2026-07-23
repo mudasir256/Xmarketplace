@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { getChatSocket, getExistingChatSocket } from "@/lib/chat/socket-client";
+import { ensureChatSocket, getExistingChatSocket, waitUntilConnected } from "@/lib/chat/socket-client";
 import { notifyChatUnreadChanged } from "@/components/chat/messages-nav-link";
 import type {
   ChatMessage,
@@ -105,10 +105,17 @@ export function ChatProvider({
   const [error, setError] = useState<string | null>(null);
   const activeRef = useRef<string | null>(null);
   const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const messagesRef = useRef(messagesByConversation);
+  const loadedConversationsRef = useRef<Set<string>>(new Set());
+  const listenersAttachedRef = useRef(false);
 
   useEffect(() => {
     activeRef.current = activeConversationId;
   }, [activeConversationId]);
+
+  useEffect(() => {
+    messagesRef.current = messagesByConversation;
+  }, [messagesByConversation]);
 
   const refreshConversations = useCallback(async () => {
     const response = await fetch("/api/conversations");
@@ -182,7 +189,15 @@ export function ChatProvider({
 
   const markRead = useCallback((conversationId: string, messageId: string) => {
     const socket = getExistingChatSocket();
-    socket?.emit("message:read", { conversationId, messageId });
+    if (socket?.connected) {
+      socket.emit("message:read", { conversationId, messageId });
+    } else {
+      void fetch(`/api/conversations/${conversationId}/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId }),
+      }).catch(() => undefined);
+    }
 
     setUnreadByConversation((prev) => {
       if ((prev[conversationId] ?? 0) === 0) return prev;
@@ -300,7 +315,7 @@ export function ChatProvider({
   }, [userId]);
 
   const retryMessage = useCallback(async (conversationId: string, clientMessageId: string) => {
-    const existing = messagesByConversation[conversationId]?.find(
+    const existing = messagesRef.current[conversationId]?.find(
       (item) => item.clientMessageId === clientMessageId,
     );
     if (!existing?.body) return;
@@ -343,7 +358,7 @@ export function ChatProvider({
         ),
       }));
     }
-  }, [messagesByConversation]);
+  }, []);
 
   const blockPeer = useCallback(async (peerId: string) => {
     const response = await fetch(`/api/users/${peerId}/block`, {
@@ -372,6 +387,7 @@ export function ChatProvider({
       delete next[conversationId];
       return next;
     });
+    loadedConversationsRef.current.delete(conversationId);
     setUnreadByConversation((prev) => {
       const next = { ...prev };
       delete next[conversationId];
@@ -382,38 +398,98 @@ export function ChatProvider({
   }, []);
 
   const uploadAttachment = useCallback(async (conversationId: string, file: File) => {
+    if (!userId) return;
+
     const clientMessageId = crypto.randomUUID();
-    const form = new FormData();
-    form.set("file", file);
-    form.set("conversationId", conversationId);
-    form.set("clientMessageId", clientMessageId);
+    const localUrl = URL.createObjectURL(file);
+    const optimistic: ChatMessage = {
+      id: clientMessageId,
+      conversationId,
+      senderId: userId,
+      clientMessageId,
+      messageType: file.type.startsWith("image/") ? "image" : "file",
+      body: file.name,
+      replyToMessageId: null,
+      deliveredAt: null,
+      readAt: null,
+      editedAt: null,
+      deletedAt: null,
+      createdAt: new Date().toISOString(),
+      attachments: [
+        {
+          id: clientMessageId,
+          storageKey: "",
+          originalName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          url: localUrl,
+        },
+      ],
+      status: "sending",
+    };
 
-    const response = await fetch("/api/chat/attachments", {
-      method: "POST",
-      body: form,
-    });
-    const payload = (await response.json()) as {
-      ok?: boolean;
-      message?: ChatMessage;
-      errorMessage?: string;
-    } & { message?: ChatMessage | string };
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(
-        typeof payload.message === "string" ? payload.message : "Upload failed",
-      );
-    }
-
-    if (!payload.message || typeof payload.message === "string") {
-      throw new Error("Upload failed");
-    }
-
-    const saved = payload.message;
     setMessagesByConversation((prev) => ({
       ...prev,
-      [conversationId]: upsertMessage(prev[conversationId] ?? [], { ...saved, status: "sent" }),
+      [conversationId]: upsertMessage(prev[conversationId] ?? [], optimistic),
     }));
-  }, []);
+
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("conversationId", conversationId);
+      form.set("clientMessageId", clientMessageId);
+
+      const response = await fetch("/api/chat/attachments", {
+        method: "POST",
+        body: form,
+      });
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        message?: ChatMessage;
+        errorMessage?: string;
+      } & { message?: ChatMessage | string };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(
+          typeof payload.message === "string" ? payload.message : "Upload failed",
+        );
+      }
+
+      if (!payload.message || typeof payload.message === "string") {
+        throw new Error("Upload failed");
+      }
+
+      const saved = payload.message;
+      setMessagesByConversation((prev) => ({
+        ...prev,
+        [conversationId]: upsertMessage(prev[conversationId] ?? [], { ...saved, status: "sent" }),
+      }));
+      setConversations((prev) => {
+        const next = prev.map((item) =>
+          item.id === conversationId
+            ? {
+                ...item,
+                lastMessage: saved,
+                lastMessageAt: saved.createdAt,
+                updatedAt: saved.createdAt,
+              }
+            : item,
+        );
+        return next.sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+      });
+      notifyChatUnreadChanged();
+      // Drop the local blob after React has swapped in the CDN URL.
+      window.setTimeout(() => URL.revokeObjectURL(localUrl), 2_000);
+    } catch {
+      setMessagesByConversation((prev) => ({
+        ...prev,
+        [conversationId]: (prev[conversationId] ?? []).map((item) =>
+          item.clientMessageId === clientMessageId ? { ...item, status: "failed" } : item,
+        ),
+      }));
+      URL.revokeObjectURL(localUrl);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -422,6 +498,240 @@ export function ChatProvider({
 
     let cancelled = false;
     let socketCleanup: (() => void) | undefined;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function attachSocketListeners(socket: ReturnType<typeof getExistingChatSocket>) {
+      if (!socket || listenersAttachedRef.current) return;
+      listenersAttachedRef.current = true;
+
+      const onConnect = () => {
+        setConnectionStatus("connected");
+        setError(null);
+        const active = activeRef.current;
+        if (active) {
+          socket.emit("conversation:join", { conversationId: active });
+          socket.emit(
+            "conversation:sync",
+            { conversationId: active, lastReceivedMessageId: null },
+            (ack: { ok?: boolean; messages?: ChatMessage[] }) => {
+              if (!ack?.ok || !ack.messages?.length) return;
+              setMessagesByConversation((prev) => ({
+                ...prev,
+                [active]: ack.messages!.reduce(
+                  (list, message) => upsertMessage(list, message),
+                  prev[active] ?? [],
+                ),
+              }));
+            },
+          );
+        }
+        void refreshConversations().catch(() => undefined);
+      };
+
+      const onDisconnect = () => setConnectionStatus("connecting");
+
+      socket.on("connect", onConnect);
+      socket.on("disconnect", onDisconnect);
+      if (socket.connected) onConnect();
+      else setConnectionStatus("connecting");
+
+      socket.on("message:new", (message: ChatMessage) => {
+        setMessagesByConversation((prev) => ({
+          ...prev,
+          [message.conversationId]: upsertMessage(prev[message.conversationId] ?? [], {
+            ...message,
+            status: message.senderId === userId ? message.status ?? "sent" : "delivered",
+          }),
+        }));
+
+        if (message.senderId !== userId) {
+          socket.emit("message:delivered", {
+            conversationId: message.conversationId,
+            messageId: message.id,
+          });
+          socket.emit("conversation:join", { conversationId: message.conversationId });
+          if (activeRef.current === message.conversationId) {
+            markRead(message.conversationId, message.id);
+          } else {
+            setUnreadByConversation((prev) => ({
+              ...prev,
+              [message.conversationId]: (prev[message.conversationId] ?? 0) + 1,
+            }));
+            notifyChatUnreadChanged();
+          }
+        }
+
+        setConversations((prev) => {
+          const exists = prev.some((item) => item.id === message.conversationId);
+          if (!exists) {
+            void refreshConversations().catch(() => undefined);
+            return prev;
+          }
+          const next = prev.map((item) =>
+            item.id === message.conversationId
+              ? {
+                  ...item,
+                  lastMessage: message,
+                  lastMessageAt: message.createdAt,
+                  updatedAt: message.createdAt,
+                  unreadCount:
+                    activeRef.current === message.conversationId || message.senderId === userId
+                      ? item.unreadCount
+                      : Math.max(item.unreadCount, 0) + 1,
+                }
+              : item,
+          );
+          return next.sort((a, b) =>
+            (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""),
+          );
+        });
+      });
+
+      socket.on(
+        "message:status",
+        (payload: {
+          conversationId: string;
+          messageId: string;
+          status: MessageDeliveryStatus;
+          deliveredAt?: string | null;
+          readAt?: string | null;
+        }) => {
+          setMessagesByConversation((prev) => ({
+            ...prev,
+            [payload.conversationId]: applyStatus(
+              prev[payload.conversationId] ?? [],
+              payload.messageId,
+              payload.status,
+              {
+                deliveredAt: payload.deliveredAt ?? undefined,
+                readAt: payload.readAt ?? undefined,
+              },
+            ),
+          }));
+        },
+      );
+
+      socket.on(
+        "conversation:updated",
+        (payload: { conversationId: string; lastMessage: ChatMessage }) => {
+          setConversations((prev) => {
+            const exists = prev.some((item) => item.id === payload.conversationId);
+            if (!exists) {
+              void refreshConversations().catch(() => undefined);
+              return prev;
+            }
+            return prev
+              .map((item) =>
+                item.id === payload.conversationId
+                  ? {
+                      ...item,
+                      lastMessage: payload.lastMessage,
+                      lastMessageAt: payload.lastMessage.createdAt,
+                      updatedAt: payload.lastMessage.createdAt,
+                    }
+                  : item,
+              )
+              .sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
+          });
+        },
+      );
+
+      socket.on(
+        "unread:updated",
+        (payload: { total?: number; byConversation?: Record<string, number> }) => {
+          if (payload.byConversation) setUnreadByConversation(payload.byConversation);
+          notifyChatUnreadChanged();
+        },
+      );
+
+      socket.on(
+        "typing:update",
+        (payload: { conversationId: string; userId: string; isTyping: boolean }) => {
+          if (payload.userId === userId) return;
+          setTypingUsers((prev) => {
+            const current = new Set(prev[payload.conversationId] ?? []);
+            if (payload.isTyping) current.add(payload.userId);
+            else current.delete(payload.userId);
+            return { ...prev, [payload.conversationId]: [...current] };
+          });
+          if (payload.isTyping) {
+            clearTimeout(typingTimers.current[payload.conversationId]);
+            typingTimers.current[payload.conversationId] = setTimeout(() => {
+              setTypingUsers((prev) => ({
+                ...prev,
+                [payload.conversationId]: (prev[payload.conversationId] ?? []).filter(
+                  (id) => id !== payload.userId,
+                ),
+              }));
+            }, 2500);
+          }
+        },
+      );
+
+      socket.on(
+        "presence:update",
+        (payload: { userId: string; status: "online" | "offline" }) => {
+          setPresenceByUser((prev) => ({ ...prev, [payload.userId]: payload.status }));
+        },
+      );
+
+      socket.on("chat:error", (payload: { message?: string }) => {
+        setError(payload.message || "Chat error");
+      });
+
+      socketCleanup = () => {
+        listenersAttachedRef.current = false;
+        socket.off("connect", onConnect);
+        socket.off("disconnect", onDisconnect);
+        socket.off("message:new");
+        socket.off("message:status");
+        socket.off("conversation:updated");
+        socket.off("unread:updated");
+        socket.off("typing:update");
+        socket.off("presence:update");
+        socket.off("chat:error");
+      };
+    }
+
+    async function connectLive(attempt = 0) {
+      if (cancelled) return;
+      try {
+        const socket = await ensureChatSocket();
+        if (cancelled) return;
+        attachSocketListeners(socket);
+
+        if (!socket.connected) {
+          setConnectionStatus("connecting");
+          try {
+            await waitUntilConnected(socket, 12_000);
+          } catch {
+            // Keep listeners; Socket.IO will reconnect in the background.
+            if (!cancelled && !socket.connected) {
+              setConnectionStatus("connecting");
+              const delay = Math.min(1_000 * 2 ** attempt, 8_000);
+              reconnectTimer = setTimeout(() => {
+                void connectLive(attempt + 1);
+              }, delay);
+            }
+          }
+        }
+      } catch (socketError) {
+        if (cancelled) return;
+        setConnectionStatus("connecting");
+        // Never surface SOCKET_CONNECT_TIMEOUT — REST chat still works.
+        if (
+          socketError instanceof Error &&
+          socketError.message !== "SOCKET_CONNECT_TIMEOUT" &&
+          socketError.message !== "UNAUTHORIZED"
+        ) {
+          setError("Reconnecting live chat…");
+        }
+        const delay = Math.min(1_000 * 2 ** attempt, 8_000);
+        reconnectTimer = setTimeout(() => {
+          void connectLive(attempt + 1);
+        }, delay);
+      }
+    }
 
     async function boot() {
       setLoading(true);
@@ -430,206 +740,9 @@ export function ChatProvider({
       try {
         await refreshConversations();
         if (cancelled) return;
-        // Show the inbox immediately — don't block the UI on Socket.IO.
+        // Inbox first — never block on Socket.IO.
         setLoading(false);
-
-        try {
-          const socket = await getChatSocket();
-          if (cancelled) return;
-
-          const onConnect = () => {
-            setConnectionStatus("connected");
-            const active = activeRef.current;
-            if (active) {
-              socket.emit("conversation:join", { conversationId: active });
-              socket.emit(
-                "conversation:sync",
-                { conversationId: active, lastReceivedMessageId: null },
-                (ack: { ok?: boolean; messages?: ChatMessage[] }) => {
-                  if (!ack?.ok || !ack.messages?.length) return;
-                  setMessagesByConversation((prev) => ({
-                    ...prev,
-                    [active]: ack.messages!.reduce(
-                      (list, message) => upsertMessage(list, message),
-                      prev[active] ?? [],
-                    ),
-                  }));
-                },
-              );
-            }
-            void refreshConversations().catch(() => undefined);
-          };
-
-          const onDisconnect = () => setConnectionStatus("disconnected");
-
-          socket.on("connect", onConnect);
-          socket.on("disconnect", onDisconnect);
-          if (socket.connected) onConnect();
-          else setConnectionStatus("connecting");
-
-          socket.on("message:new", (message: ChatMessage) => {
-            setMessagesByConversation((prev) => ({
-              ...prev,
-              [message.conversationId]: upsertMessage(prev[message.conversationId] ?? [], {
-                ...message,
-                status: message.senderId === userId ? message.status ?? "sent" : "delivered",
-              }),
-            }));
-
-            if (message.senderId !== userId) {
-              socket.emit("message:delivered", {
-                conversationId: message.conversationId,
-                messageId: message.id,
-              });
-              socket.emit("conversation:join", { conversationId: message.conversationId });
-              if (activeRef.current === message.conversationId) {
-                markRead(message.conversationId, message.id);
-              } else {
-                setUnreadByConversation((prev) => ({
-                  ...prev,
-                  [message.conversationId]: (prev[message.conversationId] ?? 0) + 1,
-                }));
-                notifyChatUnreadChanged();
-              }
-            }
-
-            setConversations((prev) => {
-              const exists = prev.some((item) => item.id === message.conversationId);
-              if (!exists) {
-                void refreshConversations().catch(() => undefined);
-                return prev;
-              }
-              const next = prev.map((item) =>
-                item.id === message.conversationId
-                  ? {
-                      ...item,
-                      lastMessage: message,
-                      lastMessageAt: message.createdAt,
-                      updatedAt: message.createdAt,
-                      unreadCount:
-                        activeRef.current === message.conversationId || message.senderId === userId
-                          ? item.unreadCount
-                          : Math.max(item.unreadCount, 0) + 1,
-                    }
-                  : item,
-              );
-              return next.sort((a, b) =>
-                (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""),
-              );
-            });
-          });
-
-          socket.on(
-            "message:status",
-            (payload: {
-              conversationId: string;
-              messageId: string;
-              status: MessageDeliveryStatus;
-              deliveredAt?: string | null;
-              readAt?: string | null;
-            }) => {
-              setMessagesByConversation((prev) => ({
-                ...prev,
-                [payload.conversationId]: applyStatus(
-                  prev[payload.conversationId] ?? [],
-                  payload.messageId,
-                  payload.status,
-                  {
-                    deliveredAt: payload.deliveredAt ?? undefined,
-                    readAt: payload.readAt ?? undefined,
-                  },
-                ),
-              }));
-            },
-          );
-
-          socket.on(
-            "conversation:updated",
-            (payload: { conversationId: string; lastMessage: ChatMessage }) => {
-              setConversations((prev) => {
-                const exists = prev.some((item) => item.id === payload.conversationId);
-                if (!exists) {
-                  void refreshConversations().catch(() => undefined);
-                  return prev;
-                }
-                return prev
-                  .map((item) =>
-                    item.id === payload.conversationId
-                      ? {
-                          ...item,
-                          lastMessage: payload.lastMessage,
-                          lastMessageAt: payload.lastMessage.createdAt,
-                          updatedAt: payload.lastMessage.createdAt,
-                        }
-                      : item,
-                  )
-                  .sort((a, b) => (b.lastMessageAt || "").localeCompare(a.lastMessageAt || ""));
-              });
-            },
-          );
-
-          socket.on(
-            "unread:updated",
-            (payload: { total?: number; byConversation?: Record<string, number> }) => {
-              if (payload.byConversation) setUnreadByConversation(payload.byConversation);
-              notifyChatUnreadChanged();
-            },
-          );
-
-          socket.on(
-            "typing:update",
-            (payload: { conversationId: string; userId: string; isTyping: boolean }) => {
-              if (payload.userId === userId) return;
-              setTypingUsers((prev) => {
-                const current = new Set(prev[payload.conversationId] ?? []);
-                if (payload.isTyping) current.add(payload.userId);
-                else current.delete(payload.userId);
-                return { ...prev, [payload.conversationId]: [...current] };
-              });
-              if (payload.isTyping) {
-                clearTimeout(typingTimers.current[payload.conversationId]);
-                typingTimers.current[payload.conversationId] = setTimeout(() => {
-                  setTypingUsers((prev) => ({
-                    ...prev,
-                    [payload.conversationId]: (prev[payload.conversationId] ?? []).filter(
-                      (id) => id !== payload.userId,
-                    ),
-                  }));
-                }, 2500);
-              }
-            },
-          );
-
-          socket.on(
-            "presence:update",
-            (payload: { userId: string; status: "online" | "offline" }) => {
-              setPresenceByUser((prev) => ({ ...prev, [payload.userId]: payload.status }));
-            },
-          );
-
-          socket.on("chat:error", (payload: { message?: string }) => {
-            setError(payload.message || "Chat error");
-          });
-
-          socketCleanup = () => {
-            socket.off("connect", onConnect);
-            socket.off("disconnect", onDisconnect);
-            socket.off("message:new");
-            socket.off("message:status");
-            socket.off("conversation:updated");
-            socket.off("unread:updated");
-            socket.off("typing:update");
-            socket.off("presence:update");
-            socket.off("chat:error");
-          };
-        } catch (socketError) {
-          setConnectionStatus("disconnected");
-          setError(
-            socketError instanceof Error
-              ? socketError.message
-              : "Live connection unavailable — messages still work",
-          );
-        }
+        void connectLive();
       } catch (bootError) {
         setConnectionStatus("disconnected");
         setError(bootError instanceof Error ? bootError.message : "Could not load chat");
@@ -640,18 +753,29 @@ export function ChatProvider({
     void boot();
     return () => {
       cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       socketCleanup?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  // Load history via REST immediately — do not wait for the socket.
   useEffect(() => {
+    if (!activeConversationId) return;
+    if (loadedConversationsRef.current.has(activeConversationId)) {
+      // Still join the room when live, but skip re-fetching the full history.
+    } else {
+      loadedConversationsRef.current.add(activeConversationId);
+      void loadMessages(activeConversationId).catch(() => {
+        loadedConversationsRef.current.delete(activeConversationId!);
+      });
+    }
+
     const socket = getExistingChatSocket();
-    if (!socket || !activeConversationId || connectionStatus !== "connected") return;
-    socket.emit("conversation:join", { conversationId: activeConversationId }, () => {
-      void loadMessages(activeConversationId).catch(() => undefined);
-    });
-  }, [activeConversationId, connectionStatus, loadMessages]);
+    if (socket?.connected) {
+      socket.emit("conversation:join", { conversationId: activeConversationId });
+    }
+  }, [activeConversationId, loadMessages]);
 
   const value = useMemo(
     () => ({

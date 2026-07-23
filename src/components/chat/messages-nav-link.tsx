@@ -45,7 +45,7 @@ export function MessagesNavLink({
 
     const interval = window.setInterval(() => {
       void refreshUnread();
-    }, 15_000);
+    }, 60_000);
 
     const onFocus = () => void refreshUnread();
     const onVisible = () => {

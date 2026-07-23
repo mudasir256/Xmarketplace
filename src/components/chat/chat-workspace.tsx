@@ -258,7 +258,7 @@ export function ChatWorkspace({
               ? "Connecting…"
               : "Reconnecting…"}
         </span>
-        {(bootError || error) && (
+        {(bootError || (error && error !== "SOCKET_CONNECT_TIMEOUT")) && (
           <span className="font-semibold text-[#d14343]">{bootError || error}</span>
         )}
       </div>
