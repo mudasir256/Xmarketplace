@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Bell, ChevronDown, Heart, LogOut, Menu,
-  Package, Plus, Search, Settings, ShoppingBag, ShoppingCart, UserRound, X,
+  Package, Plus, Search, Settings, ShoppingBag, UserRound, X,
 } from "lucide-react";
 import logo from "@/images/logo.png";
 import bikeImage from "@/images/Bike.png";
@@ -20,6 +20,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { LocationButton } from "@/components/location/location-button";
 import { UserAvatar } from "@/components/user-avatar";
 import { MessagesNavLink } from "@/components/chat/messages-nav-link";
+import { StoreCartLink } from "@/components/store/store-cart-link";
 
 const mobileCategories = [
   { name: "Vehicles", slug: "vehicles", image: vehicleImage },
@@ -84,10 +85,13 @@ export async function SiteHeader({ mode = "marketplace" }: SiteHeaderProps) {
             <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3]" href={store ? "/store/wishlist" : "/account/favorites"}>
               <Heart size={19} />
             </Link>
-            <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3]" href={store ? "/store/cart" : "/account/marketplace-listings"}>
-              {store ? <ShoppingCart size={19} /> : <ShoppingBag size={19} />}
-              {store && <b className="absolute -top-1.5 right-0 grid size-[17px] place-items-center rounded-full bg-brand-orange text-[9px] font-extrabold text-white">2</b>}
-            </Link>
+            {store ? (
+              <StoreCartLink />
+            ) : (
+              <Link className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3]" href="/account/marketplace-listings">
+                <ShoppingBag size={19} />
+              </Link>
+            )}
             <MessagesNavLink
               signedIn={Boolean(user)}
               className="relative grid h-10 w-[34px] place-items-center rounded-lg text-[#17283c] hover:bg-[#e7edf3] max-[1050px]:hidden"
