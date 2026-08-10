@@ -1,21 +1,36 @@
 import Link from "next/link";
-import { LocationAwareListings } from "@/components/location/location-aware-listings";
+import { Suspense } from "react";
+import { CategoryListingsSection } from "@/components/location/category-listings-section";
+import { CatalogGridSkeleton, Skeleton } from "@/components/skeletons/skeleton";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getMarketplaceListings } from "@/lib/listings";
-import { getFavoriteListingIds } from "@/lib/favorites";
 import { MARKETPLACE_CATEGORIES, MARKETPLACE_CITIES } from "@/lib/marketplace";
+
+function CategoryListingsFallback() {
+  return (
+    <div>
+      <Skeleton className="mb-4 h-4 w-64" />
+      <CatalogGridSkeleton count={8} />
+    </div>
+  );
+}
 
 export default async function CategoryPage({
   params,
   searchParams,
 }: {
   params: Promise<{ categorySlug: string }>;
-  searchParams: Promise<{ city?: string }>;
+  searchParams: Promise<{
+    city?: string;
+    lat?: string;
+    lng?: string;
+    radius?: string;
+    area?: string;
+  }>;
 }) {
   const { categorySlug } = await params;
-  const { city: cityParam } = await searchParams;
-  const city = cityParam?.trim() || undefined;
+  const query = await searchParams;
+  const city = query.city?.trim() || undefined;
 
   const known = MARKETPLACE_CATEGORIES.find((category) => category.slug === categorySlug);
   const title =
@@ -36,12 +51,6 @@ export default async function CategoryPage({
       : known
         ? `${known.name} ads near your selected location`
         : "Browse marketplace ads";
-
-  const items = await getMarketplaceListings({
-    categorySlug,
-    city,
-  });
-  const favoriteIds = await getFavoriteListingIds();
 
   return (
     <>
@@ -115,12 +124,9 @@ export default async function CategoryPage({
             </div>
           ) : null}
 
-          <LocationAwareListings
-            initialListings={items}
-            favoriteIds={favoriteIds}
-            categorySlug={categorySlug}
-            mode="category"
-          />
+          <Suspense fallback={<CategoryListingsFallback />}>
+            <CategoryListingsSection categorySlug={categorySlug} searchParams={query} />
+          </Suspense>
         </div>
       </main>
       <SiteFooter />

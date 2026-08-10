@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   DEFAULT_LOCATION,
   LOCATION_STORAGE_KEY,
@@ -32,7 +33,46 @@ type LocationContextValue = {
 
 const LocationContext = createContext<LocationContextValue | null>(null);
 
+function isBrowsePath(pathname: string) {
+  return pathname === "/" || pathname.startsWith("/category");
+}
+
+function locationSearch(location: SelectedLocation) {
+  const params = new URLSearchParams();
+  params.set("lat", String(location.latitude));
+  params.set("lng", String(location.longitude));
+  params.set("radius", String(location.radiusKm));
+  if (location.area) params.set("area", location.area);
+  return params;
+}
+
+function syncBrowseUrl(location: SelectedLocation, router: ReturnType<typeof useRouter>) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!isBrowsePath(url.pathname)) return;
+
+  const next = locationSearch(location);
+  // Preserve non-location filters (e.g. city).
+  for (const key of ["city"]) {
+    const value = url.searchParams.get(key);
+    if (value) next.set(key, value);
+  }
+
+  const currentKey = ["lat", "lng", "radius", "area"]
+    .map((key) => `${key}=${url.searchParams.get(key) ?? ""}`)
+    .join("&");
+  const nextKey = ["lat", "lng", "radius", "area"]
+    .map((key) => `${key}=${next.get(key) ?? ""}`)
+    .join("&");
+
+  if (currentKey === nextKey) return;
+
+  const query = next.toString();
+  router.replace(query ? `${url.pathname}?${query}` : url.pathname, { scroll: false });
+}
+
 export function LocationProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [selectedLocation, setSelectedLocationState] = useState<SelectedLocation>(DEFAULT_LOCATION);
   const [hydrated, setHydrated] = useState(false);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
@@ -43,6 +83,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     const stored = parseStoredLocation(window.localStorage.getItem(LOCATION_STORAGE_KEY));
     if (stored) {
       setSelectedLocationState(stored);
+      syncBrowseUrl(stored, router);
       setHydrated(true);
       return;
     }
@@ -58,37 +99,32 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         if (location) {
           setSelectedLocationState(location);
           window.localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
+          syncBrowseUrl(location, router);
         }
       })
       .catch(() => undefined)
       .finally(() => setHydrated(true));
-  }, []);
+  }, [router]);
 
-  const setSelectedLocation = useCallback((location: SelectedLocation) => {
-    setSelectedLocationState(location);
-    setLocationError(null);
-    window.localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
+  const setSelectedLocation = useCallback(
+    (location: SelectedLocation) => {
+      setSelectedLocationState(location);
+      setLocationError(null);
+      window.localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
 
-    // Persist for logged-in users (best effort).
-    void fetch("/api/account/location", {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(location),
-    }).catch(() => undefined);
+      // Persist for logged-in users (best effort).
+      void fetch("/api/account/location", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(location),
+      }).catch(() => undefined);
 
-    // Shareable URL params on marketplace browse pages.
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      const path = url.pathname;
-      if (path === "/" || path.startsWith("/category")) {
-        url.searchParams.set("lat", String(location.latitude));
-        url.searchParams.set("lng", String(location.longitude));
-        url.searchParams.set("radius", String(location.radiusKm));
-        window.history.replaceState({}, "", url.toString());
-      }
-    }
-  }, []);
+      // Soft-navigate so Server Components re-render nearby listings via SSR.
+      syncBrowseUrl(location, router);
+    },
+    [router],
+  );
 
   const value = useMemo<LocationContextValue>(
     () => ({
@@ -107,11 +143,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   // Avoid hydration mismatch flashing default vs stored location.
   if (!hydrated) {
-    return (
-      <LocationContext.Provider value={value}>
-        {children}
-      </LocationContext.Provider>
-    );
+    return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;
   }
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;

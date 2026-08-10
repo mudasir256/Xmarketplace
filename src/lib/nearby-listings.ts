@@ -212,9 +212,17 @@ export async function findNearbyListings(options: {
       return { listings, total: listings.length, source: "rpc" as const };
     }
 
-    console.error("nearby_marketplace_listings RPC failed", error?.message);
-  } catch (error) {
-    console.error("nearby RPC unavailable", error);
+    // Missing migration / schema cache miss → use client-side haversine fallback.
+    const missingRpc =
+      typeof error?.message === "string" &&
+      (error.message.includes("Could not find the function") ||
+        error.message.includes("schema cache") ||
+        error.code === "PGRST202");
+    if (!missingRpc && error?.message) {
+      console.warn("nearby_marketplace_listings RPC failed; using fallback", error.message);
+    }
+  } catch {
+    // Fall through to haversine query below.
   }
 
   const fallback = await findNearbyWithFallback(options);

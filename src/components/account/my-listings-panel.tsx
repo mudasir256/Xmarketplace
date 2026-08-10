@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { ExternalLink, LoaderCircle, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import type { MyListing } from "@/lib/account/listings";
 
 export function MyListingsPanel({ initialListings = [] }: { initialListings?: MyListing[] }) {
@@ -42,8 +42,13 @@ export function MyListingsPanel({ initialListings = [] }: { initialListings?: My
   }, []);
 
   useEffect(() => {
+    // Prefer SSR-seeded listings; only fetch when the server sent nothing.
+    if (initialListings.length > 0) {
+      setLoading(false);
+      return;
+    }
     void loadListings();
-  }, [loadListings]);
+  }, [initialListings.length, loadListings]);
 
   function onDelete(listing: MyListing) {
     const confirmed = window.confirm(`Delete “${listing.title}”? This cannot be undone.`);
@@ -78,10 +83,19 @@ export function MyListingsPanel({ initialListings = [] }: { initialListings?: My
 
   if (loading) {
     return (
-      <div className="mt-8 grid min-h-[220px] place-items-center text-muted">
-        <div className="inline-flex items-center gap-2 text-sm font-semibold">
-          <LoaderCircle className="animate-spin" size={18} /> Loading your ads…
-        </div>
+      <div className="mt-8 space-y-3" aria-busy="true" aria-label="Loading your ads">
+        {Array.from({ length: 3 }, (_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-3 rounded-xl border border-line bg-white p-3"
+          >
+            <div className="size-16 animate-pulse rounded-lg bg-[#e8eef5]" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-[55%] animate-pulse rounded bg-[#e8eef5]" />
+              <div className="h-3 w-[35%] animate-pulse rounded bg-[#e8eef5]" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

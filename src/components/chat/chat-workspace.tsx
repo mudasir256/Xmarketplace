@@ -240,8 +240,32 @@ export function ChatWorkspace({
 
   if (loading || busy) {
     return (
-      <div className="grid h-[min(720px,calc(100vh-180px))] min-h-[520px] place-items-center rounded-2xl border border-line bg-white text-sm text-muted max-[760px]:h-full max-[760px]:min-h-[320px] max-[760px]:rounded-xl">
-        Loading chat…
+      <div
+        className="grid h-[min(720px,calc(100vh-180px))] min-h-[520px] grid-cols-[320px_1fr] overflow-hidden rounded-2xl border border-line bg-white max-[960px]:grid-cols-1 max-[760px]:h-full max-[760px]:min-h-[320px] max-[760px]:rounded-xl"
+        aria-busy="true"
+        aria-label="Loading chat"
+      >
+        <aside className="space-y-3 border-r border-line bg-[#f7f9fc] p-4 max-[960px]:border-r-0">
+          <div className="h-10 animate-pulse rounded-lg bg-[#e8eef5]" />
+          {Array.from({ length: 5 }, (_, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <div className="size-11 animate-pulse rounded-full bg-[#e8eef5]" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-[70%] animate-pulse rounded bg-[#e8eef5]" />
+                <div className="h-3 w-[40%] animate-pulse rounded bg-[#e8eef5]" />
+              </div>
+            </div>
+          ))}
+        </aside>
+        <div className="hidden flex-col p-4 sm:flex">
+          <div className="mb-4 h-14 animate-pulse rounded-xl bg-[#e8eef5]" />
+          <div className="flex-1 space-y-3">
+            <div className="ml-auto h-12 w-[55%] animate-pulse rounded-2xl bg-[#e8eef5]" />
+            <div className="h-12 w-[48%] animate-pulse rounded-2xl bg-[#e8eef5]" />
+            <div className="ml-auto h-16 w-[62%] animate-pulse rounded-2xl bg-[#e8eef5]" />
+          </div>
+          <div className="mt-4 h-12 animate-pulse rounded-xl bg-[#e8eef5]" />
+        </div>
       </div>
     );
   }

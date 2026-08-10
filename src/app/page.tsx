@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   ArrowRight, Box, LayoutGrid, Star,
 } from "lucide-react";
 import { AdSlider } from "@/components/ad-slider";
-import { HomeLocationListings } from "@/components/location/home-location-listings";
+import { HomeListingsSection } from "@/components/location/home-listings-section";
+import { CatalogGridSkeleton, Skeleton } from "@/components/skeletons/skeleton";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getMarketplaceListings } from "@/lib/listings";
-import { getFavoriteListingIds } from "@/lib/favorites";
 import animalsImage from "@/images/animals.png";
 import bikeImage from "@/images/Bike.png";
 import vehicleImage from "@/images/car-new.png";
@@ -36,25 +36,31 @@ const categories = [
 
 const popularCities = ["Rawalpindi", "Islamabad", "Lahore", "Faisalabad"];
 
+function HomeListingsFallback() {
+  return (
+    <div className="space-y-10 py-[42px]">
+      {Array.from({ length: 2 }, (_, section) => (
+        <div key={section}>
+          <div className="mb-5 flex items-end justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-40" />
+              <Skeleton className="h-3 w-52" />
+            </div>
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <CatalogGridSkeleton count={4} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default async function MarketplaceHome({
   searchParams,
 }: {
-  searchParams: Promise<{ city?: string }>;
+  searchParams: Promise<{ city?: string; lat?: string; lng?: string; radius?: string; area?: string }>;
 }) {
-  const { city } = await searchParams;
-  let listings: Awaited<ReturnType<typeof getMarketplaceListings>> = [];
-  let favoriteIds: string[] = [];
-
-  try {
-    [listings, favoriteIds] = await Promise.all([
-      getMarketplaceListings({
-        city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
-      }),
-      getFavoriteListingIds(),
-    ]);
-  } catch (error) {
-    console.error("Home page data failed", error);
-  }
+  const params = await searchParams;
 
   return (
     <>
@@ -102,7 +108,9 @@ export default async function MarketplaceHome({
               </div>
             </div>
 
-            <HomeLocationListings initialListings={listings} favoriteIds={favoriteIds} />
+            <Suspense fallback={<HomeListingsFallback />}>
+              <HomeListingsSection searchParams={params} />
+            </Suspense>
           </div>
         </section>
 

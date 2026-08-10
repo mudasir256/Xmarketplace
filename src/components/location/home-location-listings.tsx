@@ -1,12 +1,6 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CatalogCard } from "@/components/catalog-card";
-import { useLocation } from "@/providers/location-provider";
-import type { MarketplaceListingCard } from "@/lib/listing-types";
-
-type NearbyCard = MarketplaceListingCard & { distanceKm?: number };
+import type { BrowseListing } from "@/lib/browse-listings";
 
 const listingSections = [
   { title: "Vehicles", slug: "vehicles" },
@@ -21,74 +15,25 @@ const listingSections = [
   { title: "Services", slug: "services" },
 ];
 
-function mapApiListings(rows: Array<Record<string, unknown>> = []): NearbyCard[] {
-  return rows.map((item) => ({
-    id: String(item.slug || item.id),
-    listingId: String(item.listingId || item.id),
-    title: String(item.title || ""),
-    price: String(item.price || "Price on request"),
-    image: String(item.image || "/placeholder-listing.svg"),
-    category: String(item.category || "Marketplace"),
-    location: item.location ? String(item.location) : undefined,
-    badge: item.badge ? String(item.badge) : undefined,
-    condition: item.condition ? String(item.condition) : undefined,
-    createdAt: item.createdAt ? String(item.createdAt) : undefined,
-    distanceKm: typeof item.distanceKm === "number" ? item.distanceKm : undefined,
-  }));
-}
-
 export function HomeLocationListings({
-  initialListings,
+  listings,
   favoriteIds,
+  showingAll,
+  area,
+  radiusKm,
 }: {
-  initialListings: MarketplaceListingCard[];
+  listings: BrowseListing[];
   favoriteIds: string[];
+  showingAll: boolean;
+  area: string;
+  radiusKm: number;
 }) {
-  const { selectedLocation } = useLocation();
-  const [nearby, setNearby] = useState<NearbyCard[]>(initialListings);
-  const [showingAll, setShowingAll] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          lat: String(selectedLocation.latitude),
-          lng: String(selectedLocation.longitude),
-          radiusKm: String(selectedLocation.radiusKm),
-          area: selectedLocation.area,
-        });
-        const response = await fetch(`/api/listings?${params.toString()}`, { cache: "no-store" });
-        const payload = (await response.json()) as {
-          listings?: Array<Record<string, unknown>>;
-          fallback?: boolean;
-        };
-        if (!response.ok || cancelled) return;
-        const mapped = mapApiListings(payload.listings);
-        setNearby(mapped.length ? mapped : initialListings);
-        setShowingAll(Boolean(payload.fallback) || mapped.length === 0);
-      } catch {
-        if (!cancelled) {
-          setNearby(initialListings);
-          setShowingAll(true);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedLocation, initialListings]);
+  const favoriteSet = new Set(favoriteIds);
 
   const sectionsWithAds = listingSections
     .map((section) => ({
       ...section,
-      items: nearby.filter((item) => item.category === section.title).slice(0, 4),
+      items: listings.filter((item) => item.category === section.title).slice(0, 4),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -96,9 +41,7 @@ export function HomeLocationListings({
     return (
       <section className="py-[42px]">
         <div className="mx-auto w-[min(1180px,calc(100%_-_32px))] rounded-2xl border border-dashed border-line bg-white px-6 py-16 text-center max-[760px]:w-[min(100%_-_24px,1180px)]">
-          <p className="m-0 text-sm text-muted">
-            {loading ? `Finding ads near ${selectedLocation.area}…` : "No ads posted yet."}
-          </p>
+          <p className="m-0 text-sm text-muted">No ads posted yet.</p>
           <Link className="mt-4 inline-flex font-extrabold text-orange" href="/post-ad">
             Post an ad →
           </Link>
@@ -112,8 +55,7 @@ export function HomeLocationListings({
       {showingAll ? (
         <div className="mx-auto mb-2 w-[min(1180px,calc(100%_-_32px))] max-[760px]:w-[min(100%_-_24px,1180px)]">
           <p className="m-0 rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">
-            No ads within {selectedLocation.radiusKm} km of {selectedLocation.area}. Showing all
-            listings instead.
+            No ads within {radiusKm} km of {area}. Showing all listings instead.
           </p>
         </div>
       ) : null}
@@ -126,9 +68,7 @@ export function HomeLocationListings({
                   {section.title}
                 </h2>
                 <p className="mt-1.5 mb-0 text-sm text-muted">
-                  {showingAll
-                    ? "All cities"
-                    : `Near ${selectedLocation.area} · ${selectedLocation.radiusKm} km`}
+                  {showingAll ? "All cities" : `Near ${area} · ${radiusKm} km`}
                 </p>
               </div>
               <Link

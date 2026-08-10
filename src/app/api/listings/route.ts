@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMarketplaceListings } from "@/lib/listings";
-import { findNearbyListings } from "@/lib/nearby-listings";
+import { getBrowseListings } from "@/lib/browse-listings";
 
 export async function GET(request: Request) {
   try {
@@ -22,35 +21,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Invalid location parameters" }, { status: 400 });
     }
 
-    const nearby = await findNearbyListings({
+    const browse = await getBrowseListings({
       latitude,
       longitude,
       radiusKm,
       categorySlug,
+      area,
       page,
       pageSize: 48,
     });
-
-    let listings = nearby.listings;
-    let total = nearby.total;
-    let fallback = false;
-    let source: "rpc" | "fallback" | "all" = nearby.source;
-
-    if (listings.length === 0) {
-      const all = await getMarketplaceListings({
-        categorySlug,
-        limit: 48,
-      });
-
-      listings = all.map((item) => ({
-        ...item,
-        distanceKm: Number.NaN,
-        area: item.location ?? null,
-      }));
-      total = all.length;
-      fallback = true;
-      source = "all";
-    }
 
     return NextResponse.json({
       location: {
@@ -59,10 +38,10 @@ export async function GET(request: Request) {
         longitude,
         radiusKm,
       },
-      total,
+      total: browse.total,
       page,
-      fallback,
-      listings: listings.map((item) => ({
+      fallback: browse.showingAll,
+      listings: browse.listings.map((item) => ({
         id: item.listingId,
         slug: item.id,
         title: item.title,
@@ -70,16 +49,13 @@ export async function GET(request: Request) {
         image: item.image,
         category: item.category,
         location: item.location,
-        distanceKm:
-          typeof item.distanceKm === "number" && Number.isFinite(item.distanceKm)
-            ? item.distanceKm
-            : undefined,
+        distanceKm: item.distanceKm,
         condition: item.condition,
         createdAt: item.createdAt,
         badge: item.badge,
         listingId: item.listingId,
       })),
-      source,
+      source: browse.showingAll ? "all" : "nearby",
     });
   } catch (error) {
     console.error("Listings API failed", error);

@@ -1,5 +1,3 @@
-"use client";
-
 import type { CatalogItem } from "@/lib/catalog";
 import { relativeListingTime, type MarketplaceListingCard } from "@/lib/listing-types";
 import Link from "next/link";
