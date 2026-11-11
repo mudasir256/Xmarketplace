@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ContactDetails } from "@/components/contact-details";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
@@ -26,12 +27,7 @@ const pages = {
   contact: {
     title: "Contact Us",
     intro: "Our support team is ready to help with marketplace and official store questions.",
-    sections: [
-      ["Email", "hello@xmarketplace.pk"],
-      ["Phone", "+92 300 1234567"],
-      ["Support hours", "Monday to Saturday, 9:00 AM–6:00 PM PKT"],
-      ["Location", "Pakistan — serving buyers and sellers nationwide"],
-    ],
+    sections: [],
   },
   privacy: {
     title: "Privacy Policy",
@@ -75,14 +71,18 @@ export default async function InfoPage({ params }: { params: Promise<{ infoSlug:
           <section className="rounded-2xl border border-line bg-white p-[clamp(28px,5vw,54px)]">
             <h1 className="m-0 text-[clamp(30px,5vw,44px)] text-navy">{page.title}</h1>
             <p className="my-3 mb-[34px] max-w-[680px] leading-[1.7] text-muted">{page.intro}</p>
-            <div className="grid gap-0">
-              {page.sections.map(([title, copy]) => (
-                <article className="border-t border-line py-[22px]" key={title}>
-                  <h2 className="mb-2 mt-0 text-[17px] text-navy">{title}</h2>
-                  <p className="m-0 text-sm leading-[1.7] text-muted">{copy}</p>
-                </article>
-              ))}
-            </div>
+            {infoSlug === "contact" ? (
+              <ContactDetails />
+            ) : (
+              <div className="grid gap-0">
+                {page.sections.map(([title, copy]) => (
+                  <article className="border-t border-line py-[22px]" key={title}>
+                    <h2 className="mb-2 mt-0 text-[17px] text-navy">{title}</h2>
+                    <p className="m-0 text-sm leading-[1.7] text-muted">{copy}</p>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </div>
       </main>

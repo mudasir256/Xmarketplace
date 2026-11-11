@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Mail, MessageCircle, Phone } from "lucide-react";
+import { siteContact } from "@/lib/site-contact";
 import logo from "../../xmarketplacelogo.png";
 
 export function SiteFooter() {
@@ -11,11 +13,11 @@ export function SiteFooter() {
             <Image className="w-[190px] rounded-lg bg-white px-[10px] py-2 max-[760px]:mx-auto max-[760px]:w-[205px]" src={logo} alt="X Marketplace" />
             <p className="my-[17px] mb-[19px] max-w-[290px] text-xs leading-[1.7] text-[#b9cbd3] max-[760px]:mx-auto max-[760px]:text-[13px]">A modern Pakistani marketplace connecting trusted buyers and sellers, plus quality products from our official store.</p>
             <div className="flex gap-[9px] max-[760px]:mt-5 max-[760px]:justify-center">
-              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11 max-[760px]:text-base max-[760px]:font-black" href="#" aria-label="LinkedIn">in</a>
-              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11 max-[760px]:text-base max-[760px]:font-black" href="#" aria-label="Instagram">◎</a>
-              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11 max-[760px]:text-base max-[760px]:font-black" href="#" aria-label="Facebook">f</a>
+              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11" href={`mailto:${siteContact.email}`} aria-label="Email X Marketplace"><Mail size={17} aria-hidden="true" /></a>
+              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11" href={`tel:${siteContact.phone}`} aria-label="Call X Marketplace"><Phone size={17} aria-hidden="true" /></a>
+              <a className="grid size-[34px] place-items-center rounded-full bg-brand-orange text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff713b] max-[760px]:size-11" href={siteContact.whatsappHref} target="_blank" rel="noopener noreferrer" aria-label="Contact X Marketplace on WhatsApp"><MessageCircle size={17} aria-hidden="true" /></a>
             </div>
-            <p className="mt-4 max-w-[290px] text-xs leading-[1.7] text-[#b9cbd3] max-[760px]:mx-auto max-[760px]:mt-6 max-[760px]:max-w-[310px] max-[760px]:text-sm">Pakistan — serving buyers and sellers nationwide</p>
+            <p className="mt-4 max-w-[290px] text-xs leading-[1.7] text-[#b9cbd3] max-[760px]:mx-auto max-[760px]:mt-6 max-[760px]:max-w-[310px] max-[760px]:text-sm">{siteContact.location}</p>
           </div>
           <details className="footer-section group max-[760px]:border-t max-[760px]:border-[#ffffff30]" open>
             <summary className="my-[2px] mb-[17px] cursor-default list-none text-[13px] font-bold text-[#ff6426] after:text-[13px] after:text-[#d7e1e5] after:transition-transform after:duration-200 group-open:after:rotate-180 max-[760px]:my-0 max-[760px]:flex max-[760px]:min-h-[74px] max-[760px]:cursor-pointer max-[760px]:items-center max-[760px]:justify-between max-[760px]:text-[17px] max-[760px]:text-white">Marketplace</summary>
@@ -46,8 +48,10 @@ export function SiteFooter() {
           </details>
           <div className="flex flex-col items-start gap-[10px] text-xs max-[760px]:items-center max-[760px]:px-0 max-[760px]:pb-2 max-[760px]:pt-[34px] max-[760px]:text-center max-[760px]:text-[15px]">
             <h4 className="mb-[7px] mt-0 text-[13px] text-[#ff6426] max-[760px]:text-xl max-[760px]:text-white">Contact Us</h4>
-            <a className="transition-colors hover:text-white" href="mailto:hello@xmarketplace.pk">hello@xmarketplace.pk</a>
-            <a className="transition-colors hover:text-white" href="tel:+923001234567">+92 300 1234567</a>
+            <span>{siteContact.name}</span>
+            <a className="break-all transition-colors hover:text-white" href={`mailto:${siteContact.email}`}>{siteContact.email}</a>
+            <a className="transition-colors hover:text-white" href={`tel:${siteContact.phone}`}>{siteContact.phoneDisplay}</a>
+            <a className="transition-colors hover:text-white" href={siteContact.whatsappHref} target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a>
             <Link className="mt-[9px] rounded-full bg-brand-orange px-4 py-[11px] font-black text-white transition duration-200 hover:-translate-y-0.5 hover:bg-brand-orange-dark max-[760px]:mt-3 max-[760px]:px-6 max-[760px]:py-[14px] max-[760px]:text-base" href="/contact">Get in touch</Link>
           </div>
         </div>
