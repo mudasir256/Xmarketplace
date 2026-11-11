@@ -61,7 +61,7 @@ export function SiteFooter() {
             <Link href="/terms">Terms &amp; Conditions</Link>
           </div>
           <span className="text-center">© 2026 X Marketplace. All rights reserved.</span>
-          <span className="text-right text-[#ff7a46] max-[760px]:text-center">X Marketplace Pakistan</span>
+          <a className="text-right text-[#ff7a46] transition-colors hover:text-white max-[760px]:text-center" href="https://www.clapit.solutions/" target="_blank" rel="noopener noreferrer">Powered by Clapit Solutions</a>
         </div>
       </div>
     </footer>
