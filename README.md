@@ -2,6 +2,16 @@
 
 Classified marketplace + official store built with Next.js and Supabase.
 
+## Demo listings
+
+The public marketplace supplements real ads with 40 original, clearly marked demo examples
+from `src/lib/demo-listings.ts`. Real ads appear first. Samples support category, city and
+search filters, and appear only on the first browse page; live listing totals exclude them.
+Demo ads have no seller contact, chat or favorites, and never create Supabase listings or users.
+To remove the examples, remove the demo supplements in `browse-listings.ts`, `listings.ts`
+and `components/location/home-listings-section.tsx`.
+Illustrative stock photo sources and their license are recorded in `public/demo/SOURCES.md`.
+
 ## Setup
 
 1. Copy env vars:

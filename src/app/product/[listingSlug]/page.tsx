@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   Clock3,
@@ -15,13 +16,19 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getFavoriteListingIds } from "@/lib/favorites";
 import { getMarketplaceListingBySlug } from "@/lib/listings";
+import { getDemoListingBySlug } from "@/lib/demo-listings";
+
+export async function generateMetadata({ params }: { params: Promise<{ listingSlug: string }> }): Promise<Metadata> {
+  const demo = getDemoListingBySlug((await params).listingSlug);
+  return demo ? { title: `${demo.title} (Demo)`, robots: { index: false, follow: true } } : {};
+}
 
 export default async function ListingPage({ params }: { params: Promise<{ listingSlug: string }> }) {
   const { listingSlug } = await params;
   const listing = await getMarketplaceListingBySlug(listingSlug);
   if (!listing) notFound();
 
-  const favoriteIds = await getFavoriteListingIds();
+  const favoriteIds = listing.isDemo ? [] : await getFavoriteListingIds();
   const isFavorited = favoriteIds.includes(listing.listingId);
 
   return (
@@ -47,14 +54,25 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
               >
                 <Share2 size={17} />
               </button>
-              <FavoriteButton
-                listingId={listing.listingId}
-                initialFavorited={isFavorited}
-                iconSize={17}
-                className="grid size-10 place-items-center rounded-full border border-line bg-white text-navy disabled:opacity-70"
-              />
+              {!listing.isDemo ? (
+                <FavoriteButton
+                  listingId={listing.listingId}
+                  initialFavorited={isFavorited}
+                  iconSize={17}
+                  className="grid size-10 place-items-center rounded-full border border-line bg-white text-navy disabled:opacity-70"
+                />
+              ) : null}
             </div>
           </div>
+
+          {listing.isDemo ? (
+            <div className="mb-5 rounded-2xl border border-[#ffd7b8] bg-[#fff8f1] px-5 py-4 text-sm text-navy">
+              <p className="m-0 font-extrabold">Demo listing — not for sale.</p>
+              <p className="mb-0 mt-1 leading-relaxed text-[#5b4635]">
+                This fictional example shows how marketplace ads look. The item and price are illustrative; no seller is offering it for sale.
+              </p>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-[1.35fr_0.75fr] items-start gap-5 max-[960px]:grid-cols-1">
             <div className="grid gap-4">
@@ -63,7 +81,7 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
               <section className="rounded-2xl border border-line bg-white p-5 shadow-[0_8px_24px_#04182f0a]">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full bg-[#fff1ec] px-3 py-1 text-[11px] font-black tracking-[0.8px] text-orange uppercase">
-                    {listing.badge ?? "Fresh listing"}
+                    {listing.isDemo ? "DEMO" : listing.badge ?? "Fresh listing"}
                   </span>
                   <span className="inline-flex rounded-full bg-[#eef6ff] px-3 py-1 text-[11px] font-black tracking-[0.8px] text-[#1d4f79] uppercase">
                     {listing.conditionLabel}
@@ -78,7 +96,7 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
                     <MapPin size={13} /> {listing.location || "Pakistan"}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f3f6f9] px-3 py-1.5 text-xs font-bold text-[#526177]">
-                    <Clock3 size={13} /> {listing.postedDateLabel}
+                    <Clock3 size={13} /> {listing.isDemo ? "Sample ad" : listing.postedDateLabel}
                   </span>
                 </div>
               </section>
@@ -136,14 +154,29 @@ export default async function ListingPage({ params }: { params: Promise<{ listin
             </div>
 
             <div className="lg:sticky lg:top-24 lg:self-start">
-              <ListingSellerPanel
-                sellerName={listing.seller.name}
-                phone={listing.seller.phone}
-                avatarUrl={listing.seller.avatarUrl}
-                listingSlug={listing.id}
-                listingTitle={listing.title}
-                listingImage={listing.images[0] || listing.image}
-              />
+              {listing.isDemo ? (
+                <aside className="rounded-[18px] border border-line bg-white p-5 shadow-[0_8px_24px_#04182f0d]">
+                  <h2 className="mb-3 mt-0 text-lg font-extrabold text-navy">Explore a demo ad</h2>
+                  <p className="m-0 text-sm leading-relaxed text-muted">
+                    This sample has no seller or contact details. To sell an item you own, create a real marketplace ad with your own photos and information.
+                  </p>
+                  <Link
+                    href="/post-ad"
+                    className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-orange px-4 py-3 text-sm font-extrabold text-white"
+                  >
+                    Post a real ad
+                  </Link>
+                </aside>
+              ) : (
+                <ListingSellerPanel
+                  sellerName={listing.seller.name}
+                  phone={listing.seller.phone}
+                  avatarUrl={listing.seller.avatarUrl}
+                  listingSlug={listing.id}
+                  listingTitle={listing.title}
+                  listingImage={listing.images[0] || listing.image}
+                />
+              )}
             </div>
           </div>
         </div>

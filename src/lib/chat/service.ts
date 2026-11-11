@@ -394,6 +394,11 @@ export async function findOrCreateConversation(input: {
   listingId?: string;
   listingSlug?: string;
 }) {
+  const { getDemoListingBySlug } = await import("@/lib/demo-listings");
+  if (getDemoListingBySlug(input.listingId ?? "") || getDemoListingBySlug(input.listingSlug ?? "")) {
+    throw new ChatError("LISTING_NOT_FOUND", "Demo listings are not available for chat", 404);
+  }
+
   const listing = await resolveListing(input.listingId, input.listingSlug);
   const sellerId = listing.user_id;
 

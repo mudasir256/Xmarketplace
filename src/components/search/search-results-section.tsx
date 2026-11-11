@@ -24,16 +24,22 @@ export async function SearchResultsSection({ query }: { query: string }) {
     getFavoriteListingIds(),
   ]);
   const favoriteSet = new Set(favoriteIds);
+  const demoCount = results.filter((item) => item.isDemo).length;
+  const liveCount = results.length - demoCount;
 
   return (
     <>
       <div className="mb-4 flex items-end justify-between gap-4">
         <div>
           <h2 className="m-0 text-lg font-extrabold text-navy">
-            {results.length} result{results.length === 1 ? "" : "s"} for “{query}”
+            {demoCount > 0
+              ? `${liveCount} live ad${liveCount === 1 ? "" : "s"} · ${demoCount} demo example${demoCount === 1 ? "" : "s"}`
+              : `${results.length} result${results.length === 1 ? "" : "s"}`} for “{query}”
           </h2>
           <p className="mt-1 mb-0 text-xs text-muted">
-            Showing listings that match your search words.
+            {demoCount > 0
+              ? "Demo examples are fictional and are not for sale. Results match your search words."
+              : "Showing listings that match your search words."}
           </p>
         </div>
       </div>

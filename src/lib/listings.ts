@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { getUserAvatarUrl, getUserDisplayName, getInitialsAvatarDataUrl, normalizeAvatarUrl } from "@/lib/user-display";
+import { getDemoListingBySlug, getDemoListings } from "@/lib/demo-listings";
 
 export type { MarketplaceListingCard, MarketplaceListingDetail } from "@/lib/listing-types";
 export { relativeListingTime } from "@/lib/listing-types";
@@ -135,16 +136,20 @@ async function fetchVisibleListingRows(options?: {
     if (!isSupabaseConfigured()) return [] as ListingRow[];
 
     const supabase = createPublicClient();
+    const categorySlug = options?.categorySlug;
+    const specificCategory = categorySlug && categorySlug !== "all" && categorySlug !== "featured";
 
     // Public catalog: everyone (signed in or not) only sees published ads.
     let query = supabase
       .from("marketplace_listings")
-      .select(listingSelect)
+      .select(specificCategory ? listingSelect.replace("marketplace_categories (", "marketplace_categories!inner (") : listingSelect)
       .eq("status", "PUBLISHED")
       .order("created_at", { ascending: false });
 
     if (options?.slug) query = query.eq("slug", options.slug);
     if (options?.city) query = query.ilike("city", options.city);
+    if (specificCategory) query = query.eq("marketplace_categories.slug", categorySlug);
+    if (categorySlug === "featured") query = query.eq("is_featured", true);
     if (options?.limit) query = query.limit(options.limit);
 
     const { data, error } = await query;
@@ -153,16 +158,7 @@ async function fetchVisibleListingRows(options?: {
       return [] as ListingRow[];
     }
 
-    let rows = (data ?? []) as unknown as ListingRow[];
-
-    if (options?.categorySlug && options.categorySlug !== "all") {
-      rows = rows.filter((row) => categoryOf(row).slug === options.categorySlug);
-    }
-    if (options?.categorySlug === "featured") {
-      rows = rows.filter((row) => row.is_featured);
-    }
-
-    return rows;
+    return (data ?? []) as unknown as ListingRow[];
   } catch (error) {
     console.error("Failed to load marketplace listings", error);
     return [] as ListingRow[];
@@ -232,10 +228,18 @@ export async function searchMarketplaceListings(query: string, options?: { limit
     });
 
   const limited = options?.limit ? ranked.slice(0, options.limit) : ranked;
-  return limited.map((item) => mapListingCard(item.row));
+  const live = limited.map((item) => mapListingCard(item.row));
+  const demos = getDemoListings({
+    query,
+    limit: Math.max(0, (options?.limit ?? 96) - live.length),
+  });
+  return [...live, ...demos];
 }
 
 export async function getMarketplaceListingBySlug(slug: string) {
+  const demo = getDemoListingBySlug(slug);
+  if (demo) return demo;
+
   const rows = await fetchVisibleListingRows({ slug, limit: 1 });
   const row = rows[0];
   if (!row) return null;

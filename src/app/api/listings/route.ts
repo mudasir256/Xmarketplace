@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const page = Number(searchParams.get("page") ?? 1);
     const categorySlug = searchParams.get("category") || searchParams.get("categorySlug") || undefined;
     const area = searchParams.get("area") || undefined;
+    const city = searchParams.get("city") || undefined;
 
     if (
       !Number.isFinite(latitude) ||
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
       radiusKm,
       categorySlug,
       area,
+      city,
       page,
       pageSize: 48,
     });
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
         radiusKm,
       },
       total: browse.total,
+      demoTotal: browse.listings.filter((item) => item.isDemo).length,
       page,
       fallback: browse.showingAll,
       listings: browse.listings.map((item) => ({
@@ -54,6 +57,7 @@ export async function GET(request: Request) {
         createdAt: item.createdAt,
         badge: item.badge,
         listingId: item.listingId,
+        isDemo: item.isDemo ?? false,
       })),
       source: browse.showingAll ? "all" : "nearby",
     });

@@ -6,6 +6,7 @@ import {
   type SelectedLocation,
 } from "@/lib/location";
 import { findNearbyListings } from "@/lib/nearby-listings";
+import { getDemoListings } from "@/lib/demo-listings";
 
 export type BrowseListing = MarketplaceListingCard & {
   distanceKm?: number;
@@ -52,7 +53,7 @@ export function parseBrowseLocationParams(searchParams: {
   };
 }
 
-export async function getBrowseListings(options: {
+type BrowseListingsOptions = {
   latitude: number;
   longitude: number;
   radiusKm: number;
@@ -61,7 +62,9 @@ export async function getBrowseListings(options: {
   city?: string;
   page?: number;
   pageSize?: number;
-}): Promise<BrowseListingsResult> {
+};
+
+async function getLiveBrowseListings(options: BrowseListingsOptions): Promise<BrowseListingsResult> {
   const location = {
     latitude: options.latitude,
     longitude: options.longitude,
@@ -116,4 +119,18 @@ export async function getBrowseListings(options: {
     showingAll: true,
     location,
   };
+}
+
+export async function getBrowseListings(options: BrowseListingsOptions): Promise<BrowseListingsResult> {
+  const live = await getLiveBrowseListings(options);
+  // Samples fill the first page only, after real ads. Live totals and nearby distances stay real.
+  if ((options.page ?? 1) > 1) return live;
+
+  const demos = getDemoListings({
+    categorySlug: options.categorySlug,
+    city: options.city,
+    limit: Math.max(0, (options.pageSize ?? 48) - live.listings.length),
+  });
+
+  return { ...live, listings: [...live.listings, ...demos] };
 }

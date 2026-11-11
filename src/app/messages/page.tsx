@@ -4,6 +4,7 @@ import { ChatWorkspace, type ChatProductContext } from "@/components/chat/chat-w
 import { getAuthUser } from "@/lib/auth";
 import { getMarketplaceListingBySlug } from "@/lib/listings";
 import { ChatProvider } from "@/providers/chat-provider";
+import { redirect } from "next/navigation";
 
 export default async function MessagesPage({
   searchParams,
@@ -21,6 +22,7 @@ export default async function MessagesPage({
 
   if (params.listing) {
     const listing = await getMarketplaceListingBySlug(params.listing);
+    if (listing?.isDemo) redirect(`/product/${listing.id}`);
     if (listing) {
       initialProduct = {
         productId: listing.listingId || listing.id,

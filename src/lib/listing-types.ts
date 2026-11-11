@@ -6,6 +6,7 @@ export type MarketplaceListingCard = CatalogItem & {
   contactNumber?: string | null;
   createdAt?: string;
   condition?: string | null;
+  isDemo?: boolean;
 };
 
 export type MarketplaceListingDetail = MarketplaceListingCard & {

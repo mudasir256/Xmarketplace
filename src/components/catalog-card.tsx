@@ -14,23 +14,26 @@ export function CatalogCard({
   favorited?: boolean;
 }) {
   const href = store ? `/store/product/${item.id}` : `/product/${item.id}`;
-  const postedLabel = store
-    ? "In stock"
-    : relativeListingTime("createdAt" in item ? item.createdAt : undefined);
+  const isDemo = "isDemo" in item && item.isDemo === true;
+  const badge = isDemo ? "DEMO" : item.badge;
+  const postedLabel = isDemo
+    ? "Sample ad"
+    : store
+      ? "In stock"
+      : relativeListingTime("createdAt" in item ? item.createdAt : undefined);
   const listingId = "listingId" in item ? item.listingId : null;
 
   return (
     <article className="group relative overflow-hidden rounded-[14px] border border-brand-line bg-white transition duration-200 ease-out hover:-translate-y-[3px] hover:shadow-[0_14px_30px_#0a234214]">
       <Link href={href} className="absolute inset-0 z-10" aria-label={`View ${item.title}`} />
       <div className="relative h-[190px] overflow-hidden bg-[#e8eef5] max-[760px]:h-[145px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" src={item.image} alt={item.title} />
-        {item.badge && (
+        <img className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" src={item.image} alt={item.title} loading="lazy" decoding="async" />
+        {badge && (
           <span className="absolute left-3 top-3 rounded-md bg-brand-orange px-[9px] py-1.5 text-[9px] font-black tracking-[.6px] text-white">
-            {item.badge}
+            {badge}
           </span>
         )}
-        {!store && listingId ? (
+        {!store && !isDemo && listingId ? (
           <FavoriteButton
             listingId={listingId}
             initialFavorited={favorited}

@@ -36,6 +36,9 @@ export function HomeLocationListings({
       items: listings.filter((item) => item.category === section.title).slice(0, 4),
     }))
     .filter((section) => section.items.length > 0);
+  const visibleListings = sectionsWithAds.flatMap((section) => section.items);
+  const demoCount = visibleListings.filter((item) => item.isDemo).length;
+  const liveCount = visibleListings.length - demoCount;
 
   if (sectionsWithAds.length === 0) {
     return (
@@ -52,10 +55,18 @@ export function HomeLocationListings({
 
   return (
     <>
-      {showingAll ? (
+      {demoCount > 0 ? (
+        <div className="mx-auto mb-2 w-[min(1180px,calc(100%_-_32px))] max-[760px]:w-[min(100%_-_24px,1180px)]">
+          <p className="m-0 rounded-xl border border-[#ffd7b8] bg-[#fff8f1] px-4 py-3 text-sm text-navy">
+            <strong>{liveCount} live ad{liveCount === 1 ? "" : "s"} · {demoCount} demo example{demoCount === 1 ? "" : "s"} shown.</strong>{" "}
+            Demo examples are fictional and are not for sale.
+          </p>
+        </div>
+      ) : null}
+      {showingAll && liveCount > 0 ? (
         <div className="mx-auto mb-2 w-[min(1180px,calc(100%_-_32px))] max-[760px]:w-[min(100%_-_24px,1180px)]">
           <p className="m-0 rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">
-            No ads within {radiusKm} km of {area}. Showing all listings instead.
+            No {demoCount > 0 ? "live " : ""}ads within {radiusKm} km of {area}. Showing all {demoCount > 0 ? "live " : ""}listings instead.
           </p>
         </div>
       ) : null}
@@ -68,7 +79,13 @@ export function HomeLocationListings({
                   {section.title}
                 </h2>
                 <p className="mt-1.5 mb-0 text-sm text-muted">
-                  {showingAll ? "All cities" : `Near ${area} · ${radiusKm} km`}
+                  {section.items.every((item) => item.isDemo)
+                    ? "Demo examples · not for sale"
+                    : section.items.some((item) => item.isDemo)
+                      ? "Live ads and demo examples"
+                      : showingAll
+                        ? "All cities"
+                        : `Near ${area} · ${radiusKm} km`}
                 </p>
               </div>
               <Link
@@ -82,7 +99,7 @@ export function HomeLocationListings({
               {section.items.map((item) => (
                 <div key={item.id} className="relative">
                   <CatalogCard item={item} favorited={favoriteSet.has(item.listingId)} />
-                  {!showingAll && typeof item.distanceKm === "number" ? (
+                  {!item.isDemo && !showingAll && typeof item.distanceKm === "number" ? (
                     <span className="pointer-events-none absolute top-3 left-3 z-2 rounded-full bg-[#04182fcc] px-2 py-1 text-[10px] font-extrabold text-white">
                       {item.distanceKm.toFixed(1)} km
                     </span>

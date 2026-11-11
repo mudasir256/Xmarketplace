@@ -1,6 +1,8 @@
 import { HomeLocationListings } from "@/components/location/home-location-listings";
 import { getBrowseListings, parseBrowseLocationParams } from "@/lib/browse-listings";
 import { getFavoriteListingIds } from "@/lib/favorites";
+import { getDemoListings } from "@/lib/demo-listings";
+import { MARKETPLACE_CATEGORIES } from "@/lib/marketplace";
 
 export async function HomeListingsSection({
   searchParams,
@@ -37,6 +39,17 @@ export async function HomeListingsSection({
     favoriteIds = favorites;
   } catch (error) {
     console.error("Home listings section failed", error);
+  }
+
+  // The home page shows four cards per category, even if a busy category used the browse limit.
+  for (const category of MARKETPLACE_CATEGORIES) {
+    const count = listings.filter((item) => item.category === category.name).length;
+    if (count >= 4) continue;
+    const existingIds = new Set(listings.map((item) => item.listingId));
+    const samples = getDemoListings({ categorySlug: category.slug, city })
+      .filter((item) => !existingIds.has(item.listingId))
+      .slice(0, 4 - count);
+    listings = [...listings, ...samples];
   }
 
   return (

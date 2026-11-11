@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMarketplaceListings } from "@/lib/listings";
 import { isSupabaseConfigured } from "@/lib/env-public";
 import type { MarketplaceListingCard } from "@/lib/listing-types";
+import { getDemoListingBySlug } from "@/lib/demo-listings";
 
 export type ToggleFavoriteResult = {
   ok: boolean;
@@ -53,6 +54,10 @@ export async function getFavoriteListings(): Promise<MarketplaceListingCard[]> {
 export async function toggleFavorite(listingId: string): Promise<ToggleFavoriteResult> {
   if (!listingId) {
     return { ok: false, favorited: false, message: "Invalid listing." };
+  }
+
+  if (getDemoListingBySlug(listingId)) {
+    return { ok: false, favorited: false, message: "Demo listings cannot be saved as favorites." };
   }
 
   const supabase = await createClient();

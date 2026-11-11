@@ -47,9 +47,9 @@ export default async function CategoryPage({
     categorySlug === "all"
       ? city
         ? `Listings posted in ${city}`
-        : "Listings near your selected location"
+        : "Browse marketplace listings"
       : known
-        ? `${known.name} ads near your selected location`
+        ? `Explore ${known.name.toLowerCase()} listings`
         : "Browse marketplace ads";
 
   return (
